@@ -1,0 +1,160 @@
+# Deploying following resources:
+# - Traefik Ingress Controller
+# - Cert-Manager
+# - Rancher Server
+# - Longhorn Storage Class
+# - NGINX Proxy Manager
+
+# Deploying Traefik Ingress Controller (Internal only) using helm-chart template
+module "traefik_helm" {
+  source = "../cluster-templates/helm-chart"
+
+  chart_name       = "traefik"
+  chart_repository = "https://helm.traefik.io/traefik"
+  chart            = "traefik"
+  namespace        = kubernetes_namespace.management.metadata[0].name
+  chart_version    = var.traefik_version
+  set_values = [
+    { name = "dashboard.enabled", value = "true" },
+    { name = "ports.websecure.tls.enabled", value = "true" },
+    { name = "ports.websecure.port", value = "443" },
+    { name = "ports.web.port", value = "80" },
+    { name = "service.type", value = "ClusterIP" },
+    { name = "replicas", value = "1" },
+    { name = "resources.requests.cpu", value = "100m" },
+    { name = "resources.requests.memory", value = "50Mi" }
+  ]
+  depends_on_resource = kubernetes_namespace.management
+}
+
+# Deploying Cert-Manager
+module "cert_manager_helm" {
+  source = "../cluster-templates/helm-chart"
+
+  chart_name       = "cert-manager"
+  chart_repository = "https://charts.jetstack.io"
+  chart            = "cert-manager"
+  namespace        = kubernetes_namespace.cert_manager.metadata[0].name
+  chart_version    = var.cert_manager_version
+  set_values = [
+    { name = "crds.enabled", value = "true" },
+    { name = "crds.keep", value = "true" },
+    { name = "replicaCount", value = "1" },
+    { name = "resources.limits.cpu", value = "400m" },
+    { name = "resources.limits.memory", value = "256Mi" },
+    { name = "resources.requests.cpu", value = "100m" },
+    { name = "resources.requests.memory", value = "100Mi" }
+  ]
+  depends_on_resource = [kubernetes_namespace.cert_manager, module.traefik_helm]
+}
+
+# Deploying Rancher Server
+# module "rancher_helm" {
+#   source = "../cluster-templates/helm-chart"
+
+#   chart_name       = "rancher"
+#   chart_repository = "https://releases.rancher.com/server-charts/latest"
+#   chart            = "rancher"
+#   namespace        = kubernetes_namespace.rancher.metadata[0].name
+#   chart_version    = var.rancher_version
+#   set_values = [
+#     { name = "hostname", value = var.rancher_hostname },
+#     { name = "replicas", value = "1" },
+#     { name = "ingress.tls.source", value = "rancher" },
+#     { name = "resources.requests.cpu", value = "400m" },
+#     { name = "resources.requests.memory", value = "256Mi" }
+#   ]
+#   depends_on_resource = [kubernetes_namespace.rancher, module.cert_manager_helm, module.traefik_helm]
+# }
+
+# Deploying Longhorn
+module "longhorn_helm" {
+  source = "../cluster-templates/helm-chart"
+
+  chart_name       = "longhorn"
+  chart_repository = "https://charts.longhorn.io"
+  chart            = "longhorn"
+  namespace        = kubernetes_namespace.longhorn.metadata[0].name
+  chart_version    = var.longhorn_version
+  set_values = [
+    { name = "defaultSettings.defaultDataPath", value = "/longhorn" },
+    { name = "csi.attacherReplicaCount", value = "1" },
+    { name = "csi.provisionerReplicaCount", value = "1" },
+    { name = "csi.resizerReplicaCount", value = "1" },
+    { name = "csi.snapshotterReplicaCount", value = "1" },
+    { name = "longhornUI.replicas", value = "1" },
+    { name = "resources.requests.cpu", value = "200m" },
+    { name = "resources.requests.memory", value = "128Mi" },
+
+    # prevent Helm from creating its own StorageClass
+    { name = "defaultSettings.createDefaultDiskLabeledNodes", value = "false" },
+    { name = "defaultSettings.createDefaultStorageClass", value = "false" },
+  ]
+  depends_on_resource = [kubernetes_namespace.longhorn]
+}
+# Deploying Longhorn Storage Class
+resource "kubernetes_storage_class" "longhorn_sc" {
+  metadata {
+    name = "longhorn-sc"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" = "true"
+    }
+  }
+  storage_provisioner = "driver.longhorn.io"
+  reclaim_policy      = "Retain"
+  volume_binding_mode = "Immediate"
+  parameters = {
+    numberOfReplicas          = "2"
+    staleReplicaTimeout       = "30"
+    fromBackup                = ""
+    fsType                    = "ext4"
+    dataLocality              = "disabled"
+    unmapMarkSnapChainRemoved = "ignored"
+    disableRevisionCounter    = "true"
+    dataEngine                = "v1"
+    backupTargetName          = "default"
+  }
+  allow_volume_expansion = true
+  depends_on             = [kubernetes_namespace.longhorn, module.longhorn_helm]
+}
+
+
+# Deploying NGINX Proxy Manager
+module "nginx_proxy_deployment" {
+  source = "../cluster-templates/deployment"
+
+  app_name       = "nginx-proxy-manager"
+  namespace      = kubernetes_namespace.management.metadata[0].name
+  replicas       = 1
+  selector_label = "nginx-proxy-manager"
+  app_image      = "jc21/nginx-proxy-manager:${var.nginx_proxy_manager_version}"
+  container_ports = [
+    {
+      name  = "admin-ui"
+      value = 81
+    },
+    {
+      name  = "http"
+      value = 80
+    },
+    {
+      name  = "https"
+      value = 443
+    }
+  ]
+  cpu_request    = "150m"
+  memory_request = "128Mi"
+  volume_configs = [
+    {
+      name       = "data",
+      pvc_name   = "nginx-proxy-manager-data-pvc",
+      mount_path = "/data"
+    },
+    {
+      name       = "letsencrypt",
+      pvc_name   = "nginx-proxy-manager-letsecrypt-pvc",
+      mount_path = "/etc/letsencrypt"
+    }
+  ]
+  depends_on_resource = [kubernetes_namespace.management, module.nginx_proxy_manager_data_pvc, module.nginx_proxy_manager_letsecrypt_pvc, module.longhorn_helm]
+}

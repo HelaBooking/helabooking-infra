@@ -1,0 +1,39 @@
+*/kube-config.yaml
+on-prem/cluster-configs/kube-config.yaml
+on-prem/cluster-state/terraform.tfstate
+*secrets.tf
+
+# Terraform generated directories and files
+.terraform/
+# *.tfstate
+*.tfstate.*.backup
+*terraform.tfstate.backup
+.terraform.lock.hcl
+.terraformrc
+
+# Terraform plan files
+*.tfplan
+*.tfplan.out
+
+# Variable files containing sensitive data
+# *.tfvars
+# *.tfvars.json
+
+# Crash log files
+crash.log
+
+# Local override files (if used)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Editor-specific files (example for VS Code)
+.vscode/
+
+# Operating system generated files
+.DS_Store
+Thumbs.db
+
+
+
