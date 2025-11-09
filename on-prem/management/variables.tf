@@ -24,7 +24,7 @@ variable "longhorn_version" {
 variable "nginx_proxy_manager_version" {
   description = "Version of NGINX Proxy Manager Helm chart"
   type        = string
-  default     = "latest"
+  default     = "2.12.6"
 
 }
 

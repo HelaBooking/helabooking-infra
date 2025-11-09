@@ -2,7 +2,7 @@
 terraform {
   backend "s3" {
     bucket       = "group9-terraform-state-bucket"
-    key          = "env-dev/terraform.tfstate"
+    key          = "on-prem/env-dev-terraform.tfstate"
     region       = "ap-southeast-1"
     use_lockfile = true
     encrypt      = true
@@ -21,20 +21,10 @@ terraform {
 
 # Configure the providers
 provider "kubernetes" {
-  config_path = "cluster-configs/kube-config.yaml"
+  config_path = "../cluster-configs/kube-config.yaml"
 }
 provider "helm" {
   kubernetes {
-    config_path = "cluster-configs/kube-config.yaml"
+    config_path = "../cluster-configs/kube-config.yaml"
   }
-}
-
-
-
-# Adding individual modules
-module "cluster_management" {
-  source = "./management"
-}
-module "dev_environment" {
-  source = "./env-dev"
 }

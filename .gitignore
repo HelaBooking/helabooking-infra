@@ -8,7 +8,6 @@ on-prem/cluster-state/terraform.tfstate
 # *.tfstate
 *.tfstate.*.backup
 *terraform.tfstate.backup
-.terraform.lock.hcl
 .terraformrc
 
 # Terraform plan files
