@@ -1,9 +1,21 @@
-# Deploying following resources:
+# Deploying following cluster resources:
 # - Traefik Ingress Controller
 # - Cert-Manager
 # - Rancher Server
 # - Longhorn Storage Class
 # - NGINX Proxy Manager
+
+# Deploying Project Common Resources:
+# - Jenkins + Trivy (Vulnerability Scanning)
+# - Harbor
+# - ArgoCD
+# - Hashicorp Vault
+
+# - WSO2 Identity Server (Optional)
+# - Ansible (Outside of cluster)
+
+
+################################ Cluster Resources ################################
 
 # Deploying Traefik Ingress Controller (Internal only) using helm-chart template
 module "traefik_helm" {
@@ -26,7 +38,6 @@ module "traefik_helm" {
   ]
   depends_on_resource = kubernetes_namespace.management
 }
-
 # Deploying Cert-Manager
 module "cert_manager_helm" {
   source = "../cluster-templates/helm-chart"
@@ -47,7 +58,6 @@ module "cert_manager_helm" {
   ]
   depends_on_resource = [kubernetes_namespace.cert_manager, module.traefik_helm]
 }
-
 # Deploying Rancher Server
 # module "rancher_helm" {
 #   source = "../cluster-templates/helm-chart"
@@ -66,7 +76,6 @@ module "cert_manager_helm" {
 #   ]
 #   depends_on_resource = [kubernetes_namespace.rancher, module.cert_manager_helm, module.traefik_helm]
 # }
-
 # Deploying Longhorn
 module "longhorn_helm" {
   source = "../cluster-templates/helm-chart"
@@ -117,8 +126,6 @@ resource "kubernetes_storage_class" "longhorn_sc" {
   allow_volume_expansion = true
   depends_on             = [kubernetes_namespace.longhorn, module.longhorn_helm]
 }
-
-
 # Deploying NGINX Proxy Manager
 module "nginx_proxy_deployment" {
   source = "../cluster-templates/deployment"
@@ -157,4 +164,26 @@ module "nginx_proxy_deployment" {
     }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.nginx_proxy_manager_data_pvc, module.nginx_proxy_manager_letsecrypt_pvc, module.longhorn_helm]
+}
+
+
+################################ Project Resources ################################
+# Deploying Jenkins
+module "jenkins_helm" {
+  source = "../cluster-templates/helm-chart"
+
+  chart_name       = "jenkins"
+  chart_repository = "https://charts.jenkins.io"
+  chart            = "jenkins"
+  namespace        = kubernetes_namespace.management.metadata[0].name
+  chart_version    = var.jenkins_version
+  set_values = [
+    { name = "controller.admin.password", value = var.jenkins_admin_password },
+    { name = "controller.serviceType", value = "ClusterIP" },
+    { name = "controller.resources.limits.cpu", value = "2000m" },
+    { name = "controller.resources.limits.memory", value = "2Gi" },
+    { name = "persistence.existingClaim", value = "jenkins-pvc" },
+    { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" }
+  ]
+  depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.longhorn_helm, module.jenkins_pvc]
 }

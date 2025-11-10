@@ -18,7 +18,9 @@ resource "nginxproxymanager_certificate_letsencrypt" "proxy_certificate_template
 
   letsencrypt_email = var.nginx_proxy_manager_letsencrypt_email
   letsencrypt_agree = true
-  depends_on        = [cloudflare_dns_record.cloudflare_dns_record_template]
+  # also depends on the objects passed from the parent module, when a module is initialized using this template
+  depends_on = [cloudflare_dns_record.cloudflare_dns_record_template, var.depends_on_resource]
+
 }
 # NGINX Proxy Manager - Proxy Host Template
 resource "nginxproxymanager_proxy_host" "proxy_host_template" {
@@ -43,5 +45,5 @@ EOF
   hsts_subdomains = var.nginx_proxy_manager_hsts_subdomains
   http2_support   = var.nginx_proxy_manager_http2_support
 
-  depends_on = [nginxproxymanager_certificate_letsencrypt.proxy_certificate_template]
+  depends_on = [nginxproxymanager_certificate_letsencrypt.proxy_certificate_template, var.depends_on_resource]
 }

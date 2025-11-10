@@ -1,5 +1,13 @@
 # Deploying following resources:
-# - CouchDB
+## App Services
+# - RabbitMQ
+# - Redis
+## Supporting Services
+# - Istio (Per Namespace)
+# - Grafana & Prometheus
+# - OpenSearch & OpenSearch Dashboard with Fluent Bit
+
+
 
 # Deploying CouchDB using Helm
 module "couchdb_helm" {

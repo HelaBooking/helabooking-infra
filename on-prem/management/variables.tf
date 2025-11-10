@@ -1,5 +1,5 @@
+############################## Cluster Management Variables ##############################
 # Variables for on-prem cluster management
-
 # Helm chart versions
 variable "traefik_version" {
   description = "Version of Traefik Helm chart"
@@ -56,3 +56,14 @@ variable "cluster_service_domain" {
   default     = "svc.cluster.local"
 
 }
+
+
+############################## Project Variables ##############################
+# Helm chart versions for project services
+variable "jenkins_version" {
+  description = "Version of Jenkins Helm chart"
+  type        = string
+  default     = "5.8.107"
+}
+
+# Specific configurations for project services

@@ -28,4 +28,6 @@ module "couchdb_dns" {
   nginx_proxy_manager_forward_protocol = "http"
   nginx_proxy_manager_forward_service  = "couchdb-service.${var.namespace}.${var.cluster_service_domain}"
   nginx_proxy_manager_forward_port     = 5984
+
+  depends_on = [module.pgsql_db_dns] # To prevent 500 error when letsencrypt tries to create mutiple certificates
 }

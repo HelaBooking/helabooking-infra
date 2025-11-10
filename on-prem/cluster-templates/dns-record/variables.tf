@@ -110,3 +110,8 @@ variable "nginx_proxy_manager_http2_support" {
   type        = bool
   default     = true
 }
+variable "depends_on_resource" {
+  description = "Resource that this service depends on"
+  type        = any
+  default     = null
+}

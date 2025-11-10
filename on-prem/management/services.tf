@@ -1,4 +1,4 @@
-# Deploying following services:
+############################## Cluster Management Services ##############################
 # - NGINX Proxy Service
 
 # Deploying NGINX Proxy Manager Ingress Service
@@ -16,3 +16,5 @@ module "nginx_ingress_service" {
   service_type        = "LoadBalancer"
   depends_on_resource = module.nginx_proxy_deployment
 }
+
+############################## Project Services ##############################
