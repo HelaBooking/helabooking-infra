@@ -23,7 +23,7 @@ pipeline {
         sh '''
           echo "> Installing Terraform..."
           TERRAFORM_VERSION=1.13.5
-          wget -q https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+          curl -sSL -o https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
           unzip -q terraform_${TERRAFORM_VERSION}_linux_amd64.zip
           sudo mv terraform /usr/local/bin/
           terraform -version
@@ -114,9 +114,13 @@ pipeline {
     }
   }
 
+  // Show success/failure message
   post {
-    always {
-      echo "✅ Pipeline finished for ${env.ENVIRONMENT}"
+    success {
+      echo "Terraform deployment to ${env.ENVIRONMENT} completed successfully."
+    }
+    failure {
+      echo "Terraform deployment to ${env.ENVIRONMENT} failed."
     }
   }
 }

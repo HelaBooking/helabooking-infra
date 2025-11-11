@@ -184,6 +184,11 @@ module "jenkins_helm" {
     { name = "controller.resources.limits.memory", value = "2Gi" },
     { name = "persistence.existingClaim", value = "jenkins-pvc" },
     { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
+    # Agent configs
+    { name = "agent.nodeSelector..kubernetes\\.io/hostname", value = var.jenkins_agent_node_selector_hostname },
+    { name = "agent.podName", value = "jenkins-executor" },
+    { name = "agent.idleMinutes", value = "5" },
+    # Plugins
     {
       name = "controller.additionalPlugins",
       value_list = [
@@ -191,6 +196,7 @@ module "jenkins_helm" {
         "ansicolor:1.0.6"
       ]
     },
+    # Config as Code (JCasC) scripts
     { name = "controller.JCasC.configScripts.git-creds", value = var.jenkins_git_credentials },
     { name = "controller.JCasC.configScripts.aws-creds", value = var.jenkins_aws_credentials }
   ]

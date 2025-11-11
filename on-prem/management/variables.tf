@@ -67,3 +67,9 @@ variable "jenkins_version" {
 }
 
 # Specific configurations for project services
+# Jenkins
+variable "jenkins_agent_node_selector_hostname" {
+  description = "Node selector hostname for Jenkins agents"
+  type        = string
+  default     = "galaxy-node"
+}
