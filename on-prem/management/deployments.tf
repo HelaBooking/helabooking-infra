@@ -183,7 +183,15 @@ module "jenkins_helm" {
     { name = "controller.resources.limits.cpu", value = "2000m" },
     { name = "controller.resources.limits.memory", value = "2Gi" },
     { name = "persistence.existingClaim", value = "jenkins-pvc" },
-    { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" }
+    { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
+    {
+      name = "controller.additionalPlugins",
+      value_list = [
+        "github-branch-source:1917.v9ee8a_39b_3d0d",
+        "ansicolor:1.0.6"
+      ]
+    },
+    { name = "controller.JCasC.configScripts.git-creds", value = var.jenkins_git_credentials_jcasc }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.longhorn_helm, module.jenkins_pvc]
 }
