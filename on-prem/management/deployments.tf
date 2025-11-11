@@ -191,7 +191,8 @@ module "jenkins_helm" {
         "ansicolor:1.0.6"
       ]
     },
-    { name = "controller.JCasC.configScripts.git-creds", value = var.jenkins_git_credentials_jcasc }
+    { name = "controller.JCasC.configScripts.git-creds", value = var.jenkins_git_credentials },
+    { name = "controller.JCasC.configScripts.aws-creds", value = var.jenkins_aws_credentials }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.longhorn_helm, module.jenkins_pvc]
 }

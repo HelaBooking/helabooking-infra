@@ -17,6 +17,7 @@ pipeline {
   }
 
   stages {
+
     stage('Install Terraform & Setup AWS Credentials') {
       steps {
         sh '''
@@ -24,10 +25,9 @@ pipeline {
           TERRAFORM_VERSION=1.13.5
           wget -q https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
           unzip -q terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-          mkdir -p $HOME/bin
-          mv terraform $HOME/bin
-          export PATH=$HOME/bin:$PATH
+          sudo mv terraform /usr/local/bin/
           terraform -version
+
           echo "> Setting up AWS credentials..."
           export AWS_REGION=${AWS_CREDS_REGION}
           export AWS_ACCESS_KEY_ID=${AWS_CREDS_ACCESS_KEY_ID}
@@ -41,19 +41,19 @@ pipeline {
     stage('Select Environment') {
       steps {
         script {
-          // Detect environment based on branch name
+          // Determine environment based on branch name
           if (env.BRANCH_NAME == 'on-prem-management') {
             env.ENVIRONMENT = 'management'
-            env.STATE_KEY = ${ON_PREM_MANAGEMENT_STATE}
-            env.KUBECONFIG_FILE = ${ON_PREM_CLUSTER_KUBECONFIG}
+            env.STATE_KEY = "${ON_PREM_MANAGEMENT_STATE}"
+            env.KUBECONFIG_FILE = "${ON_PREM_CLUSTER_KUBECONFIG}"
           } else if (env.BRANCH_NAME == 'dev') {
             env.ENVIRONMENT = 'dev'
-            env.STATE_KEY = ${DEV_STATE}
-            env.KUBECONFIG_FILE = ${ON_PREM_CLUSTER_KUBECONFIG}
+            env.STATE_KEY = "${DEV_STATE}"
+            env.KUBECONFIG_FILE = "${ON_PREM_CLUSTER_KUBECONFIG}"
           } else if (env.BRANCH_NAME == 'qa') {
             env.ENVIRONMENT = 'qa'
-            env.STATE_KEY = ${QA_STATE}
-            env.KUBECONFIG_FILE = ${ON_PREM_CLUSTER_KUBECONFIG}
+            env.STATE_KEY = "${QA_STATE}"
+            env.KUBECONFIG_FILE = "${ON_PREM_CLUSTER_KUBECONFIG}"
           } else {
             error("Unsupported branch: ${env.BRANCH_NAME}")
           }
@@ -71,13 +71,15 @@ pipeline {
       steps {
         withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
           sh '''
+            echo "> Running Terraform Plan for $ENVIRONMENT"
             if [[ "$ENVIRONMENT" == "management" ]]; then
                 cd on-prem/management
             else
-                cd on-prem/env-${ENVIRONMENT}
+                cd on-prem/env-$ENVIRONMENT
             fi
-            terraform init -backend-config="key=${STATE_KEY}"
-            terraform plan -var="kubeconfig_path=${KUBECONFIG_FILE}" -out=tfplan
+
+            terraform init -backend-config="key=$STATE_KEY"
+            terraform plan -var="kubeconfig_path=$KUBECONFIG_FILE" -out=tfplan
           '''
         }
       }
@@ -85,7 +87,7 @@ pipeline {
 
     stage('Manual Approval') {
       when {
-        expression { return env.REQUIRE_APPROVAL == 'true' }
+        expression { env.REQUIRE_APPROVAL == 'true' }
       }
       steps {
         timeout(time: 15, unit: 'MINUTES') {
@@ -98,11 +100,13 @@ pipeline {
       steps {
         withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
           sh '''
+            echo "> Running Terraform Apply for $ENVIRONMENT"
             if [[ "$ENVIRONMENT" == "management" ]]; then
                 cd on-prem/management
             else
-                cd on-prem/env-${ENVIRONMENT}
+                cd on-prem/env-$ENVIRONMENT
             fi
+
             terraform apply -auto-approve tfplan
           '''
         }
