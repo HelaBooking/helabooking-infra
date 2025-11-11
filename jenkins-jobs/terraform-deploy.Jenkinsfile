@@ -23,8 +23,8 @@ pipeline {
         sh '''
           echo "> Installing Terraform..."
           TERRAFORM_VERSION=1.13.5
-          curl -sSL -o https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-          unzip -q terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+          curl -sSL -o terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+          unzip -q terraform.zip
           sudo mv terraform /usr/local/bin/
           terraform -version
 

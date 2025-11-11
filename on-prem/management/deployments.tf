@@ -185,7 +185,7 @@ module "jenkins_helm" {
     { name = "persistence.existingClaim", value = "jenkins-pvc" },
     { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
     # Agent configs
-    { name = "agent.nodeSelector..kubernetes\\.io/hostname", value = var.jenkins_agent_node_selector_hostname },
+    { name = "agent.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_agent_node_selector_hostname },
     { name = "agent.podName", value = "jenkins-executor" },
     { name = "agent.idleMinutes", value = "5" },
     # Plugins
