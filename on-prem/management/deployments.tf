@@ -188,6 +188,9 @@ module "jenkins_helm" {
     { name = "agent.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_agent_node_selector_hostname },
     { name = "agent.podName", value = "jenkins-executor" },
     { name = "agent.idleMinutes", value = "5" },
+    { name = "agent.privileged", value = "true" },
+    { name = "agent.runAsUser", value = "0" },
+    { name = "agent.runAsGroup", value = "0" },
     # Plugins
     {
       name = "controller.additionalPlugins",
