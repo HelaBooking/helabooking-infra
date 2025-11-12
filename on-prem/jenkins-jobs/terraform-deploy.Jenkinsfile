@@ -71,7 +71,6 @@ pipeline {
 
     stage('Terraform Init & Plan') {
       steps {
-        withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
           sh '''
             echo "> Running Terraform Plan for $ENVIRONMENT"
             if [[ "$ENVIRONMENT" == "management" ]]; then
@@ -83,7 +82,6 @@ pipeline {
             terraform init -backend-config="key=$STATE_KEY"
             terraform plan -var="kubeconfig_path=$KUBECONFIG_FILE" -out=tfplan
           '''
-        }
       }
     }
 
@@ -100,7 +98,6 @@ pipeline {
 
     stage('Terraform Apply') {
       steps {
-        withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
           sh '''
             echo "> Running Terraform Apply for $ENVIRONMENT"
             if [[ "$ENVIRONMENT" == "management" ]]; then
@@ -111,7 +108,6 @@ pipeline {
 
             terraform apply -auto-approve tfplan
           '''
-        }
       }
     }
   }
@@ -119,10 +115,10 @@ pipeline {
   // Show success/failure message
   post {
     success {
-      echo "Terraform deployment to ${env.ENVIRONMENT} completed successfully."
+      echo "✅ Terraform deployment to ${env.ENVIRONMENT} completed successfully."
     }
     failure {
-      echo "Terraform deployment to ${env.ENVIRONMENT} failed."
+      echo "❌ Terraform deployment to ${env.ENVIRONMENT} failed!"
     }
   }
 }
