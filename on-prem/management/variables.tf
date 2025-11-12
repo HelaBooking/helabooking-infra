@@ -63,7 +63,7 @@ variable "cluster_service_domain" {
 variable "jenkins_version" {
   description = "Version of Jenkins Helm chart"
   type        = string
-  default     = "5.8.107"
+  default     = "5.8.108"
 }
 
 # Specific configurations for project services

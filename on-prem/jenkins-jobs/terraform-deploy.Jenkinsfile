@@ -4,9 +4,9 @@ pipeline {
   environment {
     REQUIRE_APPROVAL = 'true'  // disable later for dev/qa
     // AWS Credentials
-    AWS_CREDS_REGION = 'ap-southeast-1'
-    AWS_CREDS_ACCESS_KEY = credentials('aws-access-key')
-    AWS_CREDS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+    AWS_REGION = 'ap-southeast-1'
+    AWS_ACCESS_KEY_ID = credentials('aws-access-key')
+    AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
     // S3 Backend State files
     ON_PREM_MANAGEMENT_STATE = 'on-prem/management-terraform.tfstate'
     DEV_STATE = 'on-prem/env-dev-terraform.tfstate'
@@ -28,12 +28,6 @@ pipeline {
           unzip -q terraform.zip
           mv terraform /usr/local/bin/
           terraform -version
-
-          echo "> Setting up AWS credentials..."
-          export AWS_REGION=${AWS_CREDS_REGION}
-          export AWS_ACCESS_KEY_ID=${AWS_CREDS_ACCESS_KEY}
-          export AWS_SECRET_ACCESS_KEY=${AWS_CREDS_SECRET_ACCESS_KEY}
-          echo "AWS credentials set!"
         '''
       }
     }
