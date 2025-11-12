@@ -11,8 +11,6 @@ pipeline {
     ON_PREM_MANAGEMENT_STATE = 'on-prem/management-terraform.tfstate'
     DEV_STATE = 'on-prem/env-dev-terraform.tfstate'
     QA_STATE = 'on-prem/env-qa-terraform.tfstate'
-    // Cluster Kubeconfig paths
-    ON_PREM_CLUSTER_KUBECONFIG = 'cluster-configs/kube-config.yaml'
   }
 
   stages {
@@ -39,15 +37,12 @@ pipeline {
           if (env.BRANCH_NAME == 'on-prem-management') {
             env.ENVIRONMENT = 'management'
             env.STATE_KEY = "${ON_PREM_MANAGEMENT_STATE}"
-            env.KUBECONFIG_FILE = "${ON_PREM_CLUSTER_KUBECONFIG}"
           } else if (env.BRANCH_NAME == 'dev') {
             env.ENVIRONMENT = 'dev'
             env.STATE_KEY = "${DEV_STATE}"
-            env.KUBECONFIG_FILE = "${ON_PREM_CLUSTER_KUBECONFIG}"
           } else if (env.BRANCH_NAME == 'qa') {
             env.ENVIRONMENT = 'qa'
             env.STATE_KEY = "${QA_STATE}"
-            env.KUBECONFIG_FILE = "${ON_PREM_CLUSTER_KUBECONFIG}"
           } else {
             error("Unsupported branch: ${env.BRANCH_NAME}")
           }
@@ -55,7 +50,6 @@ pipeline {
           echo """
           Environment Detected: ${env.ENVIRONMENT}
           Terraform State: ${env.STATE_KEY}
-          Kubeconfig: ${env.KUBECONFIG_FILE}
           """
         }
       }
@@ -72,7 +66,7 @@ pipeline {
             fi
 
             terraform init -backend-config="key=$STATE_KEY"
-            terraform plan -var="kubeconfig_path=$KUBECONFIG_FILE" -out=tfplan
+            terraform plan -out=tfplan
           '''
       }
     }
