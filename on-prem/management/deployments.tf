@@ -186,8 +186,9 @@ module "jenkins_helm" {
     { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
     # Agent configs
     { name = "agent.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_agent_node_selector_hostname },
-    { name = "agent.podName", value = "jenkins-executor" },
+    { name = "agent.podName", value = "jenkins-executor-agent" },
     { name = "agent.idleMinutes", value = "5" },
+    { name = "agent.hostNetworking", value = "false" },
     { name = "agent.privileged", value = "true" },
     { name = "agent.runAsUser", value = "0" },
     { name = "agent.runAsGroup", value = "0" },
@@ -201,7 +202,7 @@ module "jenkins_helm" {
     },
     # Config as Code (JCasC) scripts
     { name = "controller.JCasC.configScripts.git-creds", value = var.jenkins_git_credentials },
-    { name = "controller.JCasC.configScripts.aws-creds", value = var.jenkins_aws_credentials }
+    { name = "controller.JCasC.configScripts.aws-creds", value = var.jenkins_aws_credentials },
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.longhorn_helm, module.jenkins_pvc]
 }

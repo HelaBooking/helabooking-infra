@@ -16,7 +16,7 @@ variable "cf_dns_record_value" {
 variable "cf_dns_record_type" {
   description = "Cloudflare DNS Record Type"
   type        = string
-  default     = "CNAME"
+  default     = "CNAME" # Samples: A, AAAA, CNAME, TXT, MX, etc.
 }
 variable "cf_dns_record_comment" {
   description = "Cloudflare DNS Record Comment"
