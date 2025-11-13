@@ -73,6 +73,8 @@ pipeline {
               echo "> 🟢 [3/5] Environment setup completed."
             } else {
               error("🔴 [3/5] Environment setup failed.")
+              // Optionally, stop the pipeline here
+              return
             }
           }
         }
