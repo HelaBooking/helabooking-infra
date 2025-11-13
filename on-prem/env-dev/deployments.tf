@@ -41,46 +41,46 @@ module "couchdb_helm" {
 }
 
 # Deploying PostgreSQL
-module "postgresql_deployment" {
-  source = "../cluster-templates/deployment"
+# module "postgresql_deployment" {
+#   source = "../cluster-templates/deployment"
 
-  app_name       = "postgresql"
-  namespace      = var.namespace
-  replicas       = 1
-  selector_label = "postgresql"
-  app_image      = "postgres:${var.postgresql_image}"
-  container_ports = [
-    {
-      name  = "postgres"
-      value = 5432
-    }
-  ]
-  cpu_request    = "250m"
-  memory_request = "256Mi"
-  env_variable = [
-    {
-      name  = "POSTGRES_USER"
-      value = var.postgresql_username
-    },
-    {
-      name  = "POSTGRES_PASSWORD"
-      value = var.postgresql_password
-    },
-    {
-      name  = "POSTGRES_DB"
-      value = var.postgresql_database
-    },
-    {
-      name  = "PGDATA"
-      value = "/var/lib/postgresql/data/pgdata"
-    }
-  ]
-  volume_configs = [
-    {
-      name       = "postgresql-data"
-      mount_path = "/var/lib/postgresql/data/"
-      pvc_name   = "postgresql-data-pvc"
-    }
-  ]
-  depends_on_resource = [kubernetes_namespace.env_dev, module.postgresql_data_pvc]
-}
+#   app_name       = "postgresql"
+#   namespace      = var.namespace
+#   replicas       = 1
+#   selector_label = "postgresql"
+#   app_image      = "postgres:${var.postgresql_image}"
+#   container_ports = [
+#     {
+#       name  = "postgres"
+#       value = 5432
+#     }
+#   ]
+#   cpu_request    = "250m"
+#   memory_request = "256Mi"
+#   env_variable = [
+#     {
+#       name  = "POSTGRES_USER"
+#       value = var.postgresql_username
+#     },
+#     {
+#       name  = "POSTGRES_PASSWORD"
+#       value = var.postgresql_password
+#     },
+#     {
+#       name  = "POSTGRES_DB"
+#       value = var.postgresql_database
+#     },
+#     {
+#       name  = "PGDATA"
+#       value = "/var/lib/postgresql/data/pgdata"
+#     }
+#   ]
+#   volume_configs = [
+#     {
+#       name       = "postgresql-data"
+#       mount_path = "/var/lib/postgresql/data/"
+#       pvc_name   = "postgresql-data-pvc"
+#     }
+#   ]
+#   depends_on_resource = [kubernetes_namespace.env_dev, module.postgresql_data_pvc]
+# }
