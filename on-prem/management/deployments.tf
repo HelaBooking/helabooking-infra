@@ -192,6 +192,7 @@ module "jenkins_helm" {
     { name = "agent.privileged", value = "true" },
     { name = "agent.runAsUser", value = "0" },
     { name = "agent.runAsGroup", value = "0" },
+    { name = "agent.podRetention", value = "Always" },
     # Plugins
     {
       name = "controller.additionalPlugins",
