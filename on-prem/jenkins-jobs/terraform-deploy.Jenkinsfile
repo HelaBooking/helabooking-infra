@@ -22,18 +22,23 @@ pipeline {
           sh '''
             echo "> 🔃 [1/5] Installing Terraform..."
             TERRAFORM_VERSION=1.13.5
-            curl -sSL -o terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-            apt-get update
-            apt-get install -y unzip
-            unzip -q terraform.zip
-            mv terraform /usr/local/bin/
-            terraform -version
-            echo "> 🟢 [1/5] Terraform Installed."
+            if ! command -v terraform >/dev/null 2>&1 || [[ "$(terraform version -json | jq -r .terraform_version)" != "$TERRAFORM_VERSION" ]]; then
+                curl -sSL -o terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+                apt-get update && apt-get install -y unzip
+                unzip -o -q terraform.zip   # -o = overwrite without prompting
+                mv -f terraform /usr/local/bin/
+                terraform -version
+                echo "> 🟢 [1/5] Terraform Installed."
+            else
+                echo "> 🟢 [1/5] Terraform $TERRAFORM_VERSION already installed."
+            fi
 
             echo "> 🔃 [2/5] Setting up Secrets..."
             echo "Installing s3cmd..."
             apt-get install -y s3cmd
-            mkdir -p on-prem/cluster-configs
+            if [ ! -d "on-prem/cluster-configs" ]; then
+              mkdir -p on-prem/cluster-configs
+            fi
             echo "Downloading secrets from S3..."
             s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY get s3://$SECRETS_BUCKET/$KUBECONFIG_DEV_FILEPATH on-prem/cluster-configs/kube-config.yaml
             s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY get s3://$SECRETS_BUCKET/$MANAGEMENT_SECRETS_FILEPATH on-prem/management/secrets.tf
