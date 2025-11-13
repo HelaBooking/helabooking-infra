@@ -7,10 +7,6 @@ pipeline {
     AWS_REGION = 'ap-southeast-1'
     AWS_ACCESS_KEY_ID = credentials('aws-access-key')
     AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
-    // S3 Backend State files
-    ON_PREM_MANAGEMENT_STATE = 'on-prem/management-terraform.tfstate'
-    DEV_STATE = 'on-prem/env-dev-terraform.tfstate'
-    QA_STATE = 'on-prem/env-qa-terraform.tfstate'
     // Secrets (from s3 bucket)
     SECRETS_BUCKET = 'group9-secrets-bucket'
     KUBECONFIG_DEV_FILEPATH = 'on-prem/kube-config.yaml'
@@ -52,23 +48,18 @@ pipeline {
           // Determine environment based on branch name
           echo "> 🔍 [3/5] Detecting environment from branch name... "
           env.ENVIRONMENT = 'n/a'
-          env.STATE_KEY = 'n/a'
           if (env.BRANCH_NAME == 'on-prem-management') {
             env.ENVIRONMENT = 'management'
-            env.STATE_KEY = "${ON_PREM_MANAGEMENT_STATE}"
           } else if (env.BRANCH_NAME == 'dev') {
             env.ENVIRONMENT = 'dev'
-            env.STATE_KEY = "${DEV_STATE}"
           } else if (env.BRANCH_NAME == 'qa') {
             env.ENVIRONMENT = 'qa'
-            env.STATE_KEY = "${QA_STATE}"
           } else {
             error("🔴 Unsupported branch: ${env.BRANCH_NAME}")
           }
 
           echo """
           Environment Detected: ${env.ENVIRONMENT}
-          Terraform State: ${env.STATE_KEY}
           """
           if (env.ENVIRONMENT != 'n/a') {
             echo "> 🟢 [3/5] Environment setup completed."
@@ -89,7 +80,7 @@ pipeline {
                 cd on-prem/env-$ENVIRONMENT
             fi
 
-            terraform init -backend-config="key=$STATE_KEY"
+            terraform init
             terraform plan -out=tfplan
             echo "> 🟢 [4/5] Terraform Plan completed."
           '''
