@@ -183,7 +183,26 @@ module "jenkins_helm" {
     { name = "controller.resources.limits.cpu", value = "2000m" },
     { name = "controller.resources.limits.memory", value = "2Gi" },
     { name = "persistence.existingClaim", value = "jenkins-pvc" },
-    { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" }
+    { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
+    # Agent configs
+    { name = "agent.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_agent_node_selector_hostname },
+    { name = "agent.podName", value = "jenkins-executor-agent" },
+    { name = "agent.idleMinutes", value = "5" },
+    { name = "agent.hostNetworking", value = "false" },
+    { name = "agent.privileged", value = "true" },
+    { name = "agent.runAsUser", value = "0" },
+    { name = "agent.runAsGroup", value = "0" },
+    # Plugins
+    {
+      name = "controller.additionalPlugins",
+      value_list = [
+        "github-branch-source:1917.v9ee8a_39b_3d0d",
+        "ansicolor:1.0.6"
+      ]
+    },
+    # Config as Code (JCasC) scripts
+    { name = "controller.JCasC.configScripts.git-creds", value = var.jenkins_git_credentials },
+    { name = "controller.JCasC.configScripts.aws-creds", value = var.jenkins_aws_credentials },
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.longhorn_helm, module.jenkins_pvc]
 }

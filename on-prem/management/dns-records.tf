@@ -38,7 +38,8 @@ module "longhorn_ui_dns" {
 
   # Cloudflare variables
   cf_dns_record_name  = "longhorn.${var.cf_default_root_domain}"
-  cf_dns_record_value = var.cf_default_record_value
+  cf_dns_record_value = "192.168.1.100" # Only local network access
+  cf_dns_record_type  = "A"
 
   # NGINX Proxy Manager variables
   nginx_proxy_manager_forward_protocol = "http"
