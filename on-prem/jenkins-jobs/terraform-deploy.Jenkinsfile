@@ -40,9 +40,9 @@ pipeline {
               mkdir -p on-prem/cluster-configs
             fi
             echo "Downloading secrets from S3..."
-            s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY get s3://$SECRETS_BUCKET/$KUBECONFIG_DEV_FILEPATH on-prem/cluster-configs/kube-config.yaml
-            s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY get s3://$SECRETS_BUCKET/$MANAGEMENT_SECRETS_FILEPATH on-prem/management/secrets.tf
-            s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY get s3://$SECRETS_BUCKET/$DNS_SECRETS_FILEPATH on-prem/cluster-templates/dns-record/secrets.tf
+            s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY --force get s3://$SECRETS_BUCKET/$KUBECONFIG_DEV_FILEPATH on-prem/cluster-configs/kube-config.yaml
+            s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY --force get s3://$SECRETS_BUCKET/$MANAGEMENT_SECRETS_FILEPATH on-prem/management/secrets.tf
+            s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY --force get s3://$SECRETS_BUCKET/$DNS_SECRETS_FILEPATH on-prem/cluster-templates/dns-record/secrets.tf
             echo "> 🟢 [2/5] Secrets are set."
           '''
         }
