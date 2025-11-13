@@ -84,8 +84,10 @@ pipeline {
     stage('Terraform Init & Plan') {
       steps {
         ansiColor('xterm') {
-          sh '''
+          script{
             echo "> 🔃 [4/5] Running Terraform Plan for $ENVIRONMENT"
+
+            def planExitCode = sh(script: """
             if [[ "$ENVIRONMENT" == "management" ]]; then
                 cd on-prem/management
             else
@@ -94,16 +96,15 @@ pipeline {
 
             terraform init
             terraform plan -out=tfplan -detailed-exitcode
+            """, returnStatus: true)
             echo "> 🟢 [4/5] Terraform Plan completed."
-            EXIT_CODE=$?
-            if [ $EXIT_CODE -eq 0 ]; then
+
+            if (planExitCode == 0) {
               echo "> ℹ️ No changes detected in Terraform plan. Skipping Apply stage."
-              rm -f tfplan
-            fi
-          '''
-          if (sh(script: 'echo $EXIT_CODE', returnStdout: true).trim() == '0') {
-            // Optionally, stop the pipeline here
-            return
+              sh 'rm -f tfplan'
+              currentBuild.result = 'SUCCESS'
+              return
+            }
           }
         }
       }
