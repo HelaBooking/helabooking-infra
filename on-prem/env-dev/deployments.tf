@@ -46,7 +46,7 @@ module "postgresql_deployment" {
 
   app_name       = "postgresql"
   namespace      = var.namespace
-  replicas       = 3
+  replicas       = 1
   selector_label = "postgresql"
   app_image      = "postgres:${var.postgresql_image}"
   container_ports = [
