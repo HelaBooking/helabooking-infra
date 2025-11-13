@@ -99,7 +99,7 @@ pipeline {
             """, returnStatus: true)
             echo "> 🟢 [4/5] Terraform Plan completed."
             env.PLAN_EXIT_CODE = planExitCode.toString()
-            if (env.PLAN_EXIT_CODE == 0) {
+            if (env.PLAN_EXIT_CODE == '0') {
               echo "> ℹ️ No changes detected in Terraform plan. Skipping Apply stage."
             }
           }
