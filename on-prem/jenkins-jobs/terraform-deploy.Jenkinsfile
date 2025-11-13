@@ -99,9 +99,12 @@ pipeline {
             if [ $EXIT_CODE -eq 0 ]; then
               echo "> ℹ️ No changes detected in Terraform plan. Skipping Apply stage."
               rm -f tfplan
-              return 0
             fi
           '''
+          if (sh(script: 'echo $EXIT_CODE', returnStdout: true).trim() == '0') {
+            // Optionally, stop the pipeline here
+            return
+          }
         }
       }
     }
