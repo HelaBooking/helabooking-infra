@@ -93,9 +93,10 @@ pipeline {
             fi
 
             terraform init
-            terraform plan -out=tfplan
+            terraform plan -out=tfplan -detailed-exitcode
             echo "> 🟢 [4/5] Terraform Plan completed."
-            if [[ $(terraform show -json tfplan | jq '.resource_changes | length') -eq 0 ]]; then
+            EXIT_CODE=$?
+            if [ $EXIT_CODE -eq 0 ]; then
               echo "> ℹ️ No changes detected in Terraform plan. Skipping Apply stage."
               rm -f tfplan
               exit 0
