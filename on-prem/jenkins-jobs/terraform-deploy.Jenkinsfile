@@ -23,7 +23,7 @@ pipeline {
             echo "> 🔃 [1/5] Installing Terraform..."
             TERRAFORM_VERSION=1.13.5
             apt-get update && apt-get install -y unzip jq
-            if ! command -v terraform >/dev/null 2>&1 || [[ "$(terraform version -json | jq -r .terraform_version)" != "$TERRAFORM_VERSION" ]]; then
+            if ! command -v terraform >/dev/null 2>&1 || [ "$(terraform version -json | jq -r .terraform_version)" != "$TERRAFORM_VERSION" ]; then
                 curl -sSL -o terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
                 unzip -o -q terraform.zip   # -o = overwrite without prompting
                 mv -f terraform /usr/local/bin/
@@ -88,7 +88,7 @@ pipeline {
             echo "> 🔃 [4/5] Running Terraform Plan for $ENVIRONMENT"
 
             def planExitCode = sh(script: """
-            if [[ "$ENVIRONMENT" == "management" ]]; then
+            if [ "$ENVIRONMENT" == "management" ]; then
                 cd on-prem/management
             else
                 cd on-prem/env-$ENVIRONMENT
@@ -137,7 +137,7 @@ pipeline {
         ansiColor('xterm') {
           sh '''
             echo "> 🔃 [5/5] Running Terraform Apply for $ENVIRONMENT"
-            if [[ "$ENVIRONMENT" == "management" ]]; then
+            if [ "$ENVIRONMENT" == "management" ]; then
                 cd on-prem/management
             else
                 cd on-prem/env-$ENVIRONMENT
