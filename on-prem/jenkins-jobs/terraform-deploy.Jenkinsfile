@@ -95,6 +95,11 @@ pipeline {
             terraform init
             terraform plan -out=tfplan
             echo "> 🟢 [4/5] Terraform Plan completed."
+            if terraform show -json tfplan | jq '.resource_changes | length' | grep -q '^0$'; then
+              echo "> ℹ️ No changes detected in Terraform plan. Skipping Apply stage."
+              rm -f tfplan
+              exit 0
+            fi
           '''
         }
       }
@@ -138,6 +143,7 @@ pipeline {
 
             terraform apply -auto-approve tfplan
             echo "> 🟢 [5/5] Terraform Apply completed."
+            rm -f tfplan
           '''
         }
       }
