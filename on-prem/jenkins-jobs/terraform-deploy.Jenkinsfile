@@ -18,53 +18,57 @@ pipeline {
 
     stage('Install Tools and Setup Secrets') {
       steps {
-        sh '''
-          echo "> 🔃 [1/5] Installing Terraform..."
-          TERRAFORM_VERSION=1.13.5
-          curl -sSL -o terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-          apt-get update
-          apt-get install -y unzip
-          unzip -q terraform.zip
-          mv terraform /usr/local/bin/
-          terraform -version
-          echo "> 🟢 [1/5] Terraform Installed."
+        ansiColor('xterm') {
+          sh '''
+            echo "> 🔃 [1/5] Installing Terraform..."
+            TERRAFORM_VERSION=1.13.5
+            curl -sSL -o terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+            apt-get update
+            apt-get install -y unzip
+            unzip -q terraform.zip
+            mv terraform /usr/local/bin/
+            terraform -version
+            echo "> 🟢 [1/5] Terraform Installed."
 
-          echo "> 🔃 [2/5] Setting up Secrets..."
-          echo "Installing s3cmd..."
-          apt-get install -y s3cmd
-          mkdir -p on-prem/cluster-configs
-          echo "Downloading secrets from S3..."
-          s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY get s3://$SECRETS_BUCKET/$KUBECONFIG_DEV_FILEPATH on-prem/cluster-configs/kube-config.yaml
-          s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY get s3://$SECRETS_BUCKET/$MANAGEMENT_SECRETS_FILEPATH on-prem/management/secrets.tf
-          s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY get s3://$SECRETS_BUCKET/$DNS_SECRETS_FILEPATH on-prem/cluster-templates/dns-record/secrets.tf
-          echo "> 🟢 [2/5] Secrets are set."
-        '''
+            echo "> 🔃 [2/5] Setting up Secrets..."
+            echo "Installing s3cmd..."
+            apt-get install -y s3cmd
+            mkdir -p on-prem/cluster-configs
+            echo "Downloading secrets from S3..."
+            s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY get s3://$SECRETS_BUCKET/$KUBECONFIG_DEV_FILEPATH on-prem/cluster-configs/kube-config.yaml
+            s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY get s3://$SECRETS_BUCKET/$MANAGEMENT_SECRETS_FILEPATH on-prem/management/secrets.tf
+            s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY get s3://$SECRETS_BUCKET/$DNS_SECRETS_FILEPATH on-prem/cluster-templates/dns-record/secrets.tf
+            echo "> 🟢 [2/5] Secrets are set."
+          '''
+        }
       }
     }
 
     stage('Select Environment') {
       steps {
         script {
-          // Determine environment based on branch name
-          echo "> 🔍 [3/5] Detecting environment from branch name... "
-          env.ENVIRONMENT = 'n/a'
-          if (env.BRANCH_NAME == 'on-prem-management') {
-            env.ENVIRONMENT = 'management'
-          } else if (env.BRANCH_NAME == 'dev') {
-            env.ENVIRONMENT = 'dev'
-          } else if (env.BRANCH_NAME == 'qa') {
-            env.ENVIRONMENT = 'qa'
-          } else {
-            error("🔴 Unsupported branch: ${env.BRANCH_NAME}")
-          }
+          ansiColor('xterm') {
+            // Determine environment based on branch name
+            echo "> 🔍 [3/5] Detecting environment from branch name... "
+            env.ENVIRONMENT = 'n/a'
+            if (env.BRANCH_NAME == 'on-prem-management') {
+              env.ENVIRONMENT = 'management'
+            } else if (env.BRANCH_NAME == 'dev') {
+              env.ENVIRONMENT = 'dev'
+            } else if (env.BRANCH_NAME == 'qa') {
+              env.ENVIRONMENT = 'qa'
+            } else {
+              error("🔴 Unsupported branch: ${env.BRANCH_NAME}")
+            }
 
-          echo """
-          Environment Detected: ${env.ENVIRONMENT}
-          """
-          if (env.ENVIRONMENT != 'n/a') {
-            echo "> 🟢 [3/5] Environment setup completed."
-          } else {
-            error("🔴 [3/5] Environment setup failed.")
+            echo """
+            Environment Detected: ${env.ENVIRONMENT}
+            """
+            if (env.ENVIRONMENT != 'n/a') {
+              echo "> 🟢 [3/5] Environment setup completed."
+            } else {
+              error("🔴 [3/5] Environment setup failed.")
+            }
           }
         }
       }
@@ -72,6 +76,7 @@ pipeline {
 
     stage('Terraform Init & Plan') {
       steps {
+        ansiColor('xterm') {
           sh '''
             echo "> 🔃 [4/5] Running Terraform Plan for $ENVIRONMENT"
             if [[ "$ENVIRONMENT" == "management" ]]; then
@@ -84,6 +89,7 @@ pipeline {
             terraform plan -out=tfplan
             echo "> 🟢 [4/5] Terraform Plan completed."
           '''
+        }
       }
     }
 
@@ -92,14 +98,29 @@ pipeline {
         expression { env.REQUIRE_APPROVAL == 'true' }
       }
       steps {
-        timeout(time: 15, unit: 'MINUTES') {
-          input message: "⚠️ Apply Terraform changes for ${env.ENVIRONMENT}?"
+        script {
+          ansiColor('xterm') {
+            try {
+              timeout(time: 15, unit: 'MINUTES') {
+                input message: "⚠️ Apply Terraform changes for ${env.ENVIRONMENT}?"
+              }
+            } catch(err) {
+              echo "⚠️ Deployment aborted or timeout reached. Skipping Terraform Apply."
+              currentBuild.result = 'ABORTED'
+              // Optionally, stop the pipeline here
+              return
+            }
+          }
         }
       }
     }
 
     stage('Terraform Apply') {
+      when {
+        expression { currentBuild.result != 'ABORTED' }
+      }
       steps {
+        ansiColor('xterm') {
           sh '''
             echo "> 🔃 [5/5] Running Terraform Apply for $ENVIRONMENT"
             if [[ "$ENVIRONMENT" == "management" ]]; then
@@ -111,6 +132,7 @@ pipeline {
             terraform apply -auto-approve tfplan
             echo "> 🟢 [5/5] Terraform Apply completed."
           '''
+        }
       }
     }
   }
