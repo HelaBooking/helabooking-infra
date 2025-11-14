@@ -88,7 +88,7 @@ pipeline {
             echo "> 🔃 [4/5] Running Terraform Plan for $ENVIRONMENT"
 
             def planExitCode = sh(script: """
-            if [ "$ENVIRONMENT" == "management" ]; then
+            if [ "$ENVIRONMENT" = "management" ]; then
                 cd on-prem/management
             else
                 cd on-prem/env-$ENVIRONMENT
@@ -137,7 +137,7 @@ pipeline {
         ansiColor('xterm') {
           sh '''
             echo "> 🔃 [5/5] Running Terraform Apply for $ENVIRONMENT"
-            if [ "$ENVIRONMENT" == "management" ]; then
+            if [ "$ENVIRONMENT" = "management" ]; then
                 cd on-prem/management
             else
                 cd on-prem/env-$ENVIRONMENT
