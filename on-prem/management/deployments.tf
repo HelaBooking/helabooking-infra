@@ -7,6 +7,7 @@
 
 # Deploying Project Common Resources:
 # - Jenkins + Trivy (Vulnerability Scanning)
+# - Fluent Bit
 # - Harbor
 # - ArgoCD
 # - Hashicorp Vault

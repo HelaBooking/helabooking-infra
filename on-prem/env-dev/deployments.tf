@@ -5,7 +5,7 @@
 ## Supporting Services
 # - Istio (Per Namespace)
 # - Grafana & Prometheus
-# - OpenSearch & OpenSearch Dashboard with Fluent Bit
+# - OpenSearch & OpenSearch Dashboard
 
 
 
@@ -55,7 +55,7 @@ module "postgresql_deployment" {
       value = 5432
     }
   ]
-  cpu_request    = "250m"
+  cpu_request    = "200m"
   memory_request = "256Mi"
   env_variable = [
     {
