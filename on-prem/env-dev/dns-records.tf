@@ -21,7 +21,7 @@ module "couchdb_dns" {
   source = "../cluster-templates/dns-record"
 
   # Cloudflare variables
-  cf_dns_record_name  = "couch.${var.cf_default_root_domain}"
+  cf_dns_record_name  = "couchdb.${var.cf_default_root_domain}"
   cf_dns_record_value = var.cf_default_record_value
 
   # NGINX Proxy Manager variables

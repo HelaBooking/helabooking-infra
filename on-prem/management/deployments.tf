@@ -7,6 +7,7 @@
 
 # Deploying Project Common Resources:
 # - Jenkins + Trivy (Vulnerability Scanning)
+# - Fluent Bit
 # - Harbor
 # - ArgoCD
 # - Hashicorp Vault
@@ -186,8 +187,8 @@ module "jenkins_helm" {
     { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
     # Agent configs
     { name = "agent.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_agent_node_selector_hostname },
-    { name = "agent.podName", value = "jenkins-executor-agent" },
-    { name = "agent.idleMinutes", value = "5" },
+    { name = "agent.podName", value = "jenkins-agent" },
+    { name = "agent.idleMinutes", value = "10080" }, # 7 days
     { name = "agent.hostNetworking", value = "false" },
     { name = "agent.privileged", value = "true" },
     { name = "agent.runAsUser", value = "0" },
