@@ -55,7 +55,7 @@ module "postgresql_deployment" {
       value = 5432
     }
   ]
-  cpu_request    = "200m"
+  cpu_request    = "250m"
   memory_request = "256Mi"
   env_variable = [
     {
