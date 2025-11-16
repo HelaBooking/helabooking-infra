@@ -34,10 +34,12 @@ module "rabbitmq_helm" {
     { name = "service.type", value = "ClusterIP" },
     { name = "service.ports.amqp", value = "5672" },
     { name = "service.ports.management", value = "15672" },
-    { name = "resources.requests.memory", value = "128Mi" },
-    { name = "resources.requests.cpu", value = "250m" },
+    # Resource specifications
     { name = "resources.limits.memory", value = "512Mi" },
-    { name = "resources.limits.cpu", value = "500m" }
+    { name = "resources.limits.cpu", value = "500m" },
+    { name = "memoryHighWatermark.enabled", value = "true" },
+    { name = "memoryHighWatermark.type", value = "absolute" },
+    { name = "memoryHighWatermark.value", value = "256Mi" }
   ]
   depends_on = [kubernetes_namespace.env_dev, module.rabbitmq_data_pvc]
 }
