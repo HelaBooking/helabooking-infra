@@ -18,7 +18,7 @@ module "rabbitmq_dns" {
 
   # NGINX Proxy Manager variables
   nginx_proxy_manager_forward_protocol = "http"
-  nginx_proxy_manager_forward_service  = "rabbitmq-service.${var.namespace}.${var.cluster_service_domain}"
+  nginx_proxy_manager_forward_service  = "rabbitmq.${var.namespace}.${var.cluster_service_domain}"
   nginx_proxy_manager_forward_port     = 15672
 }
 
