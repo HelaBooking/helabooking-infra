@@ -187,7 +187,7 @@ module "jenkins_helm" {
     # Agent configs
     { name = "agent.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_agent_node_selector_hostname },
     { name = "agent.podName", value = "jenkins-agent" },
-    { name = "agent.idleMinutes", value = "30" }, # 30 minutes
+    { name = "agent.idleMinutes", value = "10080" }, # 7 days
     { name = "agent.hostNetworking", value = "false" },
     { name = "agent.privileged", value = "true" },
     { name = "agent.runAsUser", value = "0" },
