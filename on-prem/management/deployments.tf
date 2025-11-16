@@ -180,18 +180,20 @@ module "jenkins_helm" {
   set_values = [
     { name = "controller.admin.password", value = var.jenkins_admin_password },
     { name = "controller.serviceType", value = "ClusterIP" },
-    { name = "controller.resources.limits.cpu", value = "2000m" },
+    { name = "controller.resources.limits.cpu", value = "1500m" },
     { name = "controller.resources.limits.memory", value = "2Gi" },
     { name = "persistence.existingClaim", value = "jenkins-pvc" },
     { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
     # Agent configs
     { name = "agent.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_agent_node_selector_hostname },
     { name = "agent.podName", value = "jenkins-agent" },
-    { name = "agent.idleMinutes", value = "10080" }, # 7 days
+    { name = "agent.idleMinutes", value = "30" }, # 30 minutes
     { name = "agent.hostNetworking", value = "false" },
     { name = "agent.privileged", value = "true" },
     { name = "agent.runAsUser", value = "0" },
     { name = "agent.runAsGroup", value = "0" },
+    { name = "agent.resources.limits.cpu", value = "2000m" },
+    { name = "agent.resources.limits.memory", value = "1Gi" },
     # Plugins
     {
       name = "controller.additionalPlugins",
