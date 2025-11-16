@@ -192,7 +192,7 @@ module "jenkins_helm" {
     { name = "agent.privileged", value = "true" },
     { name = "agent.runAsUser", value = "0" },
     { name = "agent.runAsGroup", value = "0" },
-    { name = "agent.resources.limits.cpu", value = "2000m" },
+    { name = "agent.resources.limits.cpu", value = "1000m" },
     { name = "agent.resources.limits.memory", value = "1Gi" },
     # Plugins
     {
