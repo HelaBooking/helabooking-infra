@@ -29,13 +29,15 @@ module "rabbitmq_helm" {
     { name = "auth.password", value = var.rabbitmq_password },
     { name = "auth.erlangCookie", value = var.rabbitmq_erlang_cookie },
     { name = "replicaCount", value = "1" },
-    { name = "memoryHighWatermark.type", value = "absolute" },
-    { name = "memoryHighWatermark.value", value = "256Mi" },
     { name = "persistence.existingClaim", value = "rabbitmq-data-pvc" },
     { name = "podLabels.app", value = "rabbitmq" },
     { name = "service.type", value = "ClusterIP" },
     { name = "service.ports.amqp", value = "5672" },
-    { name = "service.ports.management", value = "15672" }
+    { name = "service.ports.management", value = "15672" },
+    { name = "resources.requests.memory", value = "128Mi" },
+    { name = "resources.requests.cpu", value = "250m" },
+    { name = "resources.limits.memory", value = "512Mi" },
+    { name = "resources.limits.cpu", value = "500m" }
   ]
   depends_on = [kubernetes_namespace.env_dev, module.rabbitmq_data_pvc]
 }
