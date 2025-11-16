@@ -1,15 +1,15 @@
 # Deploying following cluster resources:
-# - Traefik Ingress Controller
+# - Traefik
 # - Cert-Manager
-# - Rancher Server
-# - Longhorn Storage Class
+# - Rancher Server (Skipped due to resource constraints)
+# - Longhorn & Storage Class
 # - NGINX Proxy Manager
 
 # Deploying Project Common Resources:
 # - Jenkins + Trivy (Vulnerability Scanning)
-# - Fluent Bit
 # - Harbor
 # - ArgoCD
+# - Fluent Bit
 # - Hashicorp Vault
 
 # - WSO2 Identity Server (Optional)
@@ -77,6 +77,7 @@ module "cert_manager_helm" {
 #   ]
 #   depends_on_resource = [kubernetes_namespace.rancher, module.cert_manager_helm, module.traefik_helm]
 # }
+
 # Deploying Longhorn
 module "longhorn_helm" {
   source = "../cluster-templates/helm-chart"

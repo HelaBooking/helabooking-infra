@@ -1,86 +1,42 @@
 # Deploying following resources:
+## Microservices
+# - TBD
 ## App Services
 # - RabbitMQ
 # - Redis
 ## Supporting Services
 # - Istio (Per Namespace)
-# - Grafana & Prometheus
+# - Grafana & Prometheus (as Operators)
 # - OpenSearch & OpenSearch Dashboard
 
+################################ Microservice Resources ################################
+# TBD
 
+################################ App Service Resources ################################
 
-# Deploying CouchDB using Helm
-module "couchdb_helm" {
-  source = "../cluster-templates/helm-chart"
-
-  chart_name       = "couchdb"
-  chart_repository = "https://apache.github.io/couchdb-helm/"
-  chart            = "couchdb"
+# Deploying RabbitMQ
+module "rabbitmq_helm" {
+  source           = "../cluster-templates/helm-chart"
+  chart_name       = "rabbitmq"
+  chart_repository = "https://charts.bitnami.com/bitnami"
+  chart            = "rabbitmq"
   namespace        = var.namespace
-  chart_version    = var.couchdb_helm_version
+  chart_version    = var.rabbitmq_helm_version
   set_values = [
-    { name = "couchdbConfig.couchdb.uuid", value = var.couchdb_uuid },
-    { name = "adminUsername", value = var.couchdb_username },
-    { name = "adminPassword", value = var.couchdb_password },
-    { name = "clusterSize", value = "1" },
-    # Volume configurations
-    { name = "persistentVolume.enabled", value = "true" },
-    { name = "persistentVolume.size", value = "1Gi" },
-    { name = "persistentVolume.storageClass", value = "longhorn-sc" },
-
-    # Specific configurations
-    { name = "couchdbConfig.chttpd.bind_address", value = "0.0.0.0" },
-    { name = "couchdbConfig.httpd.bind_address", value = "0.0.0.0" },
-    { name = "couchdbConfig.prometheus.bind_address", value = "0.0.0.0" },
-    { name = "couchdbConfig.chttpd.enable_cors", value = "true" },
-    { name = "couchdbConfig.cors.origins", value = "*" },
-    { name = "podLabels.app", value = "couchdb" },
-    { name = "service.enabled", value = "false" },
+    { name = "auth.username", value = var.rabbitmq_username },
+    { name = "auth.password", value = var.rabbitmq_password },
+    { name = "auth.erlangCookie", value = var.rabbitmq_erlang_cookie },
+    { name = "replicaCount", value = "1" },
+    { name = "persistence.existingClaim", value = "rabbitmq-data-pvc" },
+    { name = "podLabels.app", value = "rabbitmq" },
+    { name = "servicenameOverride", value = "rabbitmq-service" },
+    { name = "service.type", value = "ClusterIP" },
+    { name = "service.ports.amqp", value = "5672" },
+    { name = "service.ports.management", value = "15672" }
   ]
-  depends_on = [kubernetes_namespace.env_dev]
+  depends_on = [kubernetes_namespace.env_dev, module.rabbitmq_data_pvc]
 }
 
-# Deploying PostgreSQL
-module "postgresql_deployment" {
-  source = "../cluster-templates/deployment"
 
-  app_name       = "postgresql"
-  namespace      = var.namespace
-  replicas       = 1
-  selector_label = "postgresql"
-  app_image      = "postgres:${var.postgresql_image}"
-  container_ports = [
-    {
-      name  = "postgres"
-      value = 5432
-    }
-  ]
-  cpu_request    = "250m"
-  memory_request = "256Mi"
-  env_variable = [
-    {
-      name  = "POSTGRES_USER"
-      value = var.postgresql_username
-    },
-    {
-      name  = "POSTGRES_PASSWORD"
-      value = var.postgresql_password
-    },
-    {
-      name  = "POSTGRES_DB"
-      value = var.postgresql_database
-    },
-    {
-      name  = "PGDATA"
-      value = "/var/lib/postgresql/data/pgdata"
-    }
-  ]
-  volume_configs = [
-    {
-      name       = "postgresql-data"
-      mount_path = "/var/lib/postgresql/data/"
-      pvc_name   = "postgresql-data-pvc"
-    }
-  ]
-  depends_on_resource = [kubernetes_namespace.env_dev, module.postgresql_data_pvc]
-}
+
+################################ Supporting Service Resources ################################

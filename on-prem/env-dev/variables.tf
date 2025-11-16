@@ -1,22 +1,8 @@
-# Variables for on-prem environment - development
-
-# common variables
+################################ Common Variables ################################
 variable "namespace" {
   description = "Kubernetes namespace for the development environment"
   type        = string
   default     = "env-dev"
-}
-
-# Image versions
-variable "couchdb_helm_version" {
-  description = "Helm chart version for CouchDB"
-  type        = string
-  default     = "4.6.2"
-}
-variable "postgresql_image" {
-  description = "Docker image for PostgreSQL"
-  type        = string
-  default     = "17-alpine"
 }
 
 # DNS Record configurations
@@ -36,39 +22,21 @@ variable "cluster_service_domain" {
   default     = "svc.cluster.local"
 }
 
+################################ Microservice Related Variables ################################
+# TBD
 
-# App specific configurations
-# CouchDB configurations
-variable "couchdb_uuid" {
-  description = "UUID for CouchDB instance"
+################################ App Service Related Variables ################################
+# Image/Helm Chart versions
+variable "rabbitmq_helm_version" {
+  description = "Version of RabbitMQ Helm chart"
   type        = string
-  default     = "ce56c886-17bc-43e9-9f79-b2a629ccbf19"
+  default     = "16.0.14"
 }
-variable "couchdb_username" {
-  description = "Admin username for CouchDB"
-  type        = string
-  default     = "testadmin"
-}
-variable "couchdb_password" {
-  description = "Admin password for CouchDB"
-  type        = string
-  default     = "test@admin.123"
-  sensitive   = true
-}
-# PostgreSQL configurations
-variable "postgresql_username" {
-  description = "Username for PostgreSQL"
-  type        = string
-  default     = "testadmin"
-}
-variable "postgresql_password" {
-  description = "Password for PostgreSQL"
-  type        = string
-  default     = "test@admin.123"
-  sensitive   = true
-}
-variable "postgresql_database" {
-  description = "Database name for PostgreSQL"
-  type        = string
-  default     = "defaultdb"
-}
+
+# Specific configurations
+
+
+################################ Supporting Service Related Variables ################################
+# Image/Helm Chart versions
+
+# Specific configurations

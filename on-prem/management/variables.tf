@@ -1,6 +1,31 @@
+############################## Common Variables ##############################
+variable "namespace" {
+  description = "Kubernetes namespace for management services"
+  type        = string
+  default     = "management"
+}
+
+# DNS Record configurations
+variable "cf_default_root_domain" {
+  description = "Root domain for the management services"
+  type        = string
+  default     = "management.ezbooking.lk"
+}
+variable "cf_default_record_value" {
+  description = "Default Cloudflare DNS record pointing value"
+  type        = string
+  default     = "strangersmp.ddns.net"
+
+}
+variable "cluster_service_domain" {
+  description = "Root domain for kubernetes cluster services"
+  type        = string
+  default     = "svc.cluster.local"
+
+}
+
 ############################## Cluster Management Variables ##############################
-# Variables for on-prem cluster management
-# Helm chart versions
+# Image/Helm Chart versions
 variable "traefik_version" {
   description = "Version of Traefik Helm chart"
   type        = string
@@ -34,39 +59,18 @@ variable "rancher_hostname" {
   type        = string
   default     = "rancher.management.ezbooking.lk"
 }
-variable "namespace" {
-  description = "Kubernetes namespace for management services"
-  type        = string
-  default     = "management"
-}
-variable "cf_default_root_domain" {
-  description = "Root domain for the management services"
-  type        = string
-  default     = "management.ezbooking.lk"
-}
-variable "cf_default_record_value" {
-  description = "Default Cloudflare DNS record pointing value"
-  type        = string
-  default     = "strangersmp.ddns.net"
 
-}
-variable "cluster_service_domain" {
-  description = "Root domain for kubernetes cluster services"
-  type        = string
-  default     = "svc.cluster.local"
-
-}
 
 
 ############################## Project Variables ##############################
-# Helm chart versions for project services
+# Image/Helm Chart versions
 variable "jenkins_version" {
   description = "Version of Jenkins Helm chart"
   type        = string
   default     = "5.8.108"
 }
 
-# Specific configurations for project services
+# Specific configurations
 # Jenkins
 variable "jenkins_agent_node_selector_hostname" {
   description = "Node selector hostname for Jenkins agents"

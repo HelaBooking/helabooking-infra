@@ -1,4 +1,4 @@
-# Includes: namesapces, network policies, ingress, egress used by development environment
+# Includes: namesapces, network policies used by development environment
 
 resource "kubernetes_namespace" "env_dev" {
   metadata {
