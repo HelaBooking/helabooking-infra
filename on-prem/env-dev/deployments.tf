@@ -2,8 +2,8 @@
 ## Microservices
 # - TBD
 ## App Services
-# - RabbitMQ
-# - Redis
+# + RabbitMQ
+# + Redis
 ## Supporting Services
 # - Istio (Per Namespace)
 # - Grafana & Prometheus (as Operators)

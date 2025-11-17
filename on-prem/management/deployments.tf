@@ -1,12 +1,12 @@
 # Deploying following cluster resources:
-# - Traefik
-# - Cert-Manager
+# + Traefik
+# + Cert-Manager
 # - Rancher Server (Skipped due to resource constraints)
-# - Longhorn & Storage Class
-# - NGINX Proxy Manager
+# + Longhorn & Storage Class
+# + NGINX Proxy Manager
 
 # Deploying Project Common Resources:
-# - Jenkins + Trivy (Vulnerability Scanning)
+# + Jenkins + Trivy (Vulnerability Scanning)
 # - Harbor
 # - ArgoCD
 # - Fluent Bit
