@@ -48,7 +48,7 @@ module "rabbitmq_helm" {
 module "redis_helm" {
   source           = "../cluster-templates/helm-chart"
   chart_name       = "redis"
-  chart_repository = "https://charts.bitnami.com/bitnami"
+  chart_repository = "oci://registry-1.docker.io/bitnamicharts"
   chart            = "redis"
   namespace        = var.namespace
   chart_version    = var.redis_helm_version
