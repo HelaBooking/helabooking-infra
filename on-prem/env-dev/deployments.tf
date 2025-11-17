@@ -44,6 +44,29 @@ module "rabbitmq_helm" {
   depends_on = [kubernetes_namespace.env_dev, module.rabbitmq_data_pvc]
 }
 
+# Deploying Redis
+module "redis_helm" {
+  source           = "../cluster-templates/helm-chart"
+  chart_name       = "redis"
+  chart_repository = "https://charts.bitnami.com/bitnami"
+  chart            = "redis"
+  namespace        = var.namespace
+  chart_version    = var.redis_helm_version
+  set_values = [
+    { name = "architecture", value = "standalone" },
+    { name = "auth.enabled", value = "true" },
+    { name = "auth.password", value = var.redis_password },
+    { name = "master.persistence.existingClaim", value = "redis-data-pvc" },
+    { name = "master.podLabels.app", value = "redis" },
+    { name = "master.service.type", value = "ClusterIP" },
+    { name = "master.service.port", value = "6379" },
+    # Resource specifications
+    { name = "master.resources.limits.memory", value = "256Mi" },
+    { name = "master.resources.limits.cpu", value = "250m" }
+  ]
+  depends_on = [kubernetes_namespace.env_dev, module.redis_data_pvc]
+}
+
 
 
 ################################ Supporting Service Resources ################################
