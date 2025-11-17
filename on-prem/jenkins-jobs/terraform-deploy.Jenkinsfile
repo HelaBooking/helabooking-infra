@@ -12,6 +12,8 @@ pipeline {
     KUBECONFIG_DEV_FILEPATH = 'on-prem/kube-config.yaml'
     DNS_SECRETS_FILEPATH = 'on-prem/dns-record/secrets.tf'
     MANAGEMENT_SECRETS_FILEPATH = 'on-prem/management/secrets.tf'
+    DEV_SECRETS_FILEPATH = 'on-prem/env-dev/secrets.tf'
+    QA_SECRETS_FILEPATH = 'on-prem/env-qa/secrets.tf'
   }
 
   stages {
@@ -43,6 +45,9 @@ pipeline {
             s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY --force get s3://$SECRETS_BUCKET/$KUBECONFIG_DEV_FILEPATH on-prem/cluster-configs/kube-config.yaml
             s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY --force get s3://$SECRETS_BUCKET/$MANAGEMENT_SECRETS_FILEPATH on-prem/management/secrets.tf
             s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY --force get s3://$SECRETS_BUCKET/$DNS_SECRETS_FILEPATH on-prem/cluster-templates/dns-record/secrets.tf
+            s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY --force get s3://$SECRETS_BUCKET/$DEV_SECRETS_FILEPATH on-prem/env-dev/secrets.tf
+            # Skipping QA due to incomplete setup
+            # s3cmd --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY --force get s3://$SECRETS_BUCKET/$QA_SECRETS_FILEPATH on-prem/env-qa/secrets.tf
             echo "> 🟢 [2/5] Secrets are set."
           '''
         }
