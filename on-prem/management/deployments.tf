@@ -222,10 +222,7 @@ module "harbor_helm" {
   chart_version    = var.harbor_version
   set_values = [
     { name = "imagePullPolicy", value = "Always" },
-    { name = "expose.type", value = "ClusterIP" },
     { name = "externalURL", value = "https://harbor.${var.cf_default_root_domain}" },
-    # { name = "expose.tls.auto.commonName", value = "harbor.${var.cf_default_root_domain}" },
-    { name = "expose.tls.enabled", value = "false" },
     { name = "harborAdminPassword", value = var.harbor_admin_password },
     # Force to schedule on amd64 node, since harbor images are not available for arm64 architecture
     { name = "nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
