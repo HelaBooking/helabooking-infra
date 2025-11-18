@@ -9,7 +9,7 @@ pipeline {
         GIT_AUTH = credentials('git-org-credentials')
         BACKEND_REPO = "https://github.com/HelaBooking/helabooking-backend.git"
         // Backend Services
-        SERVICES = ["user-service", "event-service", "booking-service", "ticketing-service", "notification-service", "audit-service"]
+        // SERVICES = Refer Line 59
     }
 
     stages {
@@ -56,7 +56,7 @@ pipeline {
 
                     echo "Changed files: ${changes}"
 
-                    ALL_SERVICES = ${SERVICES}
+                    ALL_SERVICES = ["user-service", "event-service", "booking-service", "ticketing-service", "notification-service", "audit-service"]
                     SERVICES_TO_BUILD = []
                     skipBuild = false
 
