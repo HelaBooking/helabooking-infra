@@ -223,6 +223,7 @@ module "harbor_helm" {
   set_values = [
     { name = "imagePullPolicy", value = "Always" },
     { name = "externalURL", value = "https://harbor.${var.cf_default_root_domain}" },
+    { name = "expose.ingress.hosts.core", value = "core.harbor.local" },
     { name = "harborAdminPassword", value = var.harbor_admin_password },
     # Force to schedule on amd64 node, since harbor images are not available for arm64 architecture
     { name = "nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
