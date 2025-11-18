@@ -7,7 +7,7 @@
 
 # Deploying Project Common Resources:
 # + Jenkins + Trivy (Vulnerability Scanning)
-# - Harbor
+# + Harbor
 # - ArgoCD
 # - Fluent Bit
 # - Hashicorp Vault
@@ -209,4 +209,30 @@ module "jenkins_helm" {
     { name = "controller.JCasC.configScripts.aws-creds", value = var.jenkins_aws_credentials },
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.longhorn_helm, module.jenkins_pvc]
+}
+
+# Deploying Harbor
+module "harbor_helm" {
+  source = "../cluster-templates/helm-chart"
+
+  chart_name       = "harbor"
+  chart_repository = "https://helm.goharbor.io"
+  chart            = "harbor"
+  namespace        = kubernetes_namespace.management.metadata[0].name
+  chart_version    = var.harbor_version
+  set_values = [
+    { name = "expose.type", value = "ClusterIP" },
+    { name = "externalURL", value = "https://harbor.${var.cf_default_root_domain}/" },
+    { name = "harborAdminPassword", value = var.harbor_admin_password },
+    # PVCs used in harbor
+    { name = "persistence.persistentVolumeClaim.registry.existingClaim", value = "harbor-registry-pvc" },
+    { name = "persistence.persistentVolumeClaim.database.existingClaim", value = "harbor-database-pvc" },
+    { name = "persistence.persistentVolumeClaim.jobservice.jobLog.existingClaim", value = "harbor-jobservice-pvc" },
+    { name = "persistence.persistentVolumeClaim.redis.existingClaim", value = "harbor-redis-pvc" },
+    { name = "persistence.persistentVolumeClaim.trivy.existingClaim", value = "harbor-trivy-pvc" },
+    # Resource limits
+    { name = "resources.limits.cpu", value = "1000m" },
+    { name = "resources.limits.memory", value = "1Gi" }
+  ]
+  depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.cert_manager_helm, module.longhorn_helm, module.harbor_registry_pvc, module.harbor_database_pvc, module.harbor_jobservice_pvc, module.harbor_redis_pvc, module.harbor_trivy_pvc]
 }

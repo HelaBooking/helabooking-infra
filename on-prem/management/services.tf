@@ -1,5 +1,6 @@
 ############################## Cluster Management Services ##############################
-# - NGINX Proxy Service
+# + NGINX Proxy Service
+# + Lognhorn UI (Deployed through Longhorn Helm Chart)
 
 # Deploying NGINX Proxy Manager Ingress Service
 module "nginx_ingress_service" {
@@ -18,3 +19,9 @@ module "nginx_ingress_service" {
 }
 
 ############################## Project Services ##############################
+# + Jenkins (Deployed through Jenkins Helm Chart)
+# + Harbor (Deployed through Harbor Helm Chart)
+# - ArgoCD
+# - Fluent Bit
+# - Hashicorp Vault
+
