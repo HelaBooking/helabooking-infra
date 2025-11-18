@@ -207,6 +207,7 @@ module "jenkins_helm" {
     # Config as Code (JCasC) scripts
     { name = "controller.JCasC.configScripts.git-creds", value = var.jenkins_git_credentials },
     { name = "controller.JCasC.configScripts.aws-creds", value = var.jenkins_aws_credentials },
+    { name = "controller.JCasC.configScripts.harbor-creds", value = var.harbor_credentials }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.longhorn_helm, module.jenkins_pvc]
 }

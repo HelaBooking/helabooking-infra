@@ -1,0 +1,119 @@
+pipeline {
+    agent any
+
+    environment {
+        // Harbor ENVs
+        REGISTRY = "https://harbor.management.ezbooking.lk/helabooking"
+        HARBOR_AUTH = credentials('harbor-credentials')
+        // Git ENVs
+        GIT_AUTH = credentials('git-org-credentials')
+        BACKEND_REPO = "https://github.com/HelaBooking/helabooking-backend.git"
+        // Backend Services
+        SERVICES = ["user-service", "event-service", "booking-service", "ticketing-service", "notification-service", "audit-service"]
+    }
+
+    stages {
+
+        stage('Clone Backend Services Repo') {
+            steps {
+                ansiColor('xterm') {
+                    sh '''
+                        echo "> 📁 Preparing backend repo folder..."
+
+                        if [ ! -d "/home/jenkins/agent/image-build" ]; then
+                            mkdir -p /home/jenkins/agent/image-build
+                        fi
+                        cd /home/jenkins/agent/image-build
+
+                        if [ ! -d "backend" ]; then
+                            echo "> ⬇️ Cloning backend repo..."
+                            git clone https://${GIT_AUTH_USR}:${GIT_AUTH_PSW}@${BACKEND_REPO} backend
+                            cd backend
+                        else
+                            echo "> 🔄 Backend folder exists → pulling latest..."
+                            cd backend
+                            git reset --hard
+                            git fetch --all
+                        fi
+
+                        git checkout ${BRANCH_NAME}
+                        git pull origin ${BRANCH_NAME}
+                    '''
+                }
+            }
+        }
+
+        stage('Preparing Build') {
+            steps {
+                script {
+                    sh "cd /home/jenkins/agent/image-build/backend && git fetch --prune"
+
+                    // Detect changed files
+                    def changes = sh(
+                        script: "cd /home/jenkins/agent/image-build/backend && git diff --name-only HEAD~1 HEAD",
+                        returnStdout: true
+                    ).trim().split("\n")
+
+                    echo "Changed files: ${changes}"
+
+                    ALL_SERVICES = ${SERVICES}
+                    SERVICES_TO_BUILD = []
+                    skipBuild = false
+
+                    def commonChanged = changes.any { it.startsWith("common/") }
+                    def rootPomChanged = changes.contains("pom.xml")
+
+                    if (commonChanged || rootPomChanged) {
+                        SERVICES_TO_BUILD = ALL_SERVICES
+                    } else {
+                        SERVICES_TO_BUILD = ALL_SERVICES.findAll { svc ->
+                            changes.any { it.startsWith("${svc}/") }
+                        }
+                    }
+
+                    if (SERVICES_TO_BUILD.isEmpty()) {
+                        echo "No service changes → skipping build"
+                        skipBuild = true
+                    } else {
+                        echo "Services to build → ${SERVICES_TO_BUILD}"
+                    }
+
+                    // Tag based on branch
+                    def shortCommit = sh(
+                        script: "cd /home/jenkins/agent/image-build/backend && git rev-parse --short HEAD",
+                        returnStdout: true
+                    ).trim()
+
+                    switch(env.BRANCH_NAME) {
+                        case "dev":  IMAGE_TAG = "dev-${shortCommit}"; break
+                        case "qa":   IMAGE_TAG = "qa-${shortCommit}"; break
+                        case "stag": IMAGE_TAG = "stag-${shortCommit}"; break
+                        case "main": IMAGE_TAG = "prod-${shortCommit}"; break
+                    }
+                }
+            }
+        }
+
+        stage('Build & Push Images to Harbor') {
+            when { expression { return !skipBuild } }
+            steps {
+                script {
+                    SERVICES_TO_BUILD.each { svc ->
+
+                        echo "> 🔨 Building image for ${svc}"
+
+                        sh """
+                            /kaniko/executor \
+                                --dockerfile=/home/jenkins/agent/image-build/backend/${svc}/Dockerfile \
+                                --context=/home/jenkins/agent/image-build/backend/${svc} \
+                                --destination=${REGISTRY}/${svc}:${IMAGE_TAG}
+                        """
+
+                        echo "> 📤 Pushed ${svc}:${IMAGE_TAG} to ${REGISTRY}"
+                    }
+                }
+            }
+        }
+
+    }
+}
