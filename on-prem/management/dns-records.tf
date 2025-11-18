@@ -1,7 +1,7 @@
 ############################## Cluster Management DNS Records ##############################
-# - NGINX Proxy Manager
+# + NGINX Proxy Manager
 # - Rancher Server
-# - Longhorn UI
+# + Longhorn UI
 
 # Deploying NGINX Proxy Manager
 module "nginx_proxy_manager_dns" {
@@ -51,8 +51,8 @@ module "longhorn_ui_dns" {
 
 
 ############################## Project DNS Records ##############################
-# - Jenkins
-# - Harbor
+# + Jenkins
+# + Harbor
 # - ArgoCD
 # - Hashicorp Vault
 
@@ -70,4 +70,19 @@ module "jenkins_dns" {
   nginx_proxy_manager_forward_port     = 8080
 
   depends_on_resource = [module.longhorn_ui_dns] # To prevent 500 error when letsencrypt tries to create mutiple certificates
+}
+# Deploying Harbor DNS Record
+module "harbor_dns" {
+  source = "../cluster-templates/dns-record"
+
+  # Cloudflare variables
+  cf_dns_record_name  = "harbor.${var.cf_default_root_domain}"
+  cf_dns_record_value = var.cf_default_record_value
+
+  # NGINX Proxy Manager variables
+  nginx_proxy_manager_forward_protocol = "https"
+  nginx_proxy_manager_forward_service  = "traefik.${var.namespace}.${var.cluster_service_domain}"
+  nginx_proxy_manager_forward_port     = 443
+
+  depends_on_resource = [module.jenkins_dns] # To prevent 500 error when letsencrypt tries to create mutiple certificates
 }

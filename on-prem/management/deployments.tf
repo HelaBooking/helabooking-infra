@@ -7,7 +7,7 @@
 
 # Deploying Project Common Resources:
 # + Jenkins + Trivy (Vulnerability Scanning)
-# - Harbor
+# + Harbor
 # - ArgoCD
 # - Fluent Bit
 # - Hashicorp Vault
@@ -182,7 +182,7 @@ module "jenkins_helm" {
   set_values = [
     { name = "controller.admin.password", value = var.jenkins_admin_password },
     { name = "controller.serviceType", value = "ClusterIP" },
-    { name = "controller.resources.limits.cpu", value = "2000m" },
+    { name = "controller.resources.limits.cpu", value = "1500m" },
     { name = "controller.resources.limits.memory", value = "2Gi" },
     { name = "persistence.existingClaim", value = "jenkins-pvc" },
     { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
@@ -194,6 +194,8 @@ module "jenkins_helm" {
     { name = "agent.privileged", value = "true" },
     { name = "agent.runAsUser", value = "0" },
     { name = "agent.runAsGroup", value = "0" },
+    { name = "agent.resources.limits.cpu", value = "1000m" },
+    { name = "agent.resources.limits.memory", value = "1Gi" },
     # Plugins
     {
       name = "controller.additionalPlugins",
@@ -205,6 +207,45 @@ module "jenkins_helm" {
     # Config as Code (JCasC) scripts
     { name = "controller.JCasC.configScripts.git-creds", value = var.jenkins_git_credentials },
     { name = "controller.JCasC.configScripts.aws-creds", value = var.jenkins_aws_credentials },
+    { name = "controller.JCasC.configScripts.harbor-creds", value = var.harbor_credentials }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.longhorn_helm, module.jenkins_pvc]
+}
+
+# Deploying Harbor
+module "harbor_helm" {
+  source = "../cluster-templates/helm-chart"
+
+  chart_name       = "harbor"
+  chart_repository = "https://helm.goharbor.io"
+  chart            = "harbor"
+  namespace        = kubernetes_namespace.management.metadata[0].name
+  chart_version    = var.harbor_version
+  set_values = [
+    { name = "imagePullPolicy", value = "Always" },
+    { name = "externalURL", value = "https://harbor.${var.cf_default_root_domain}" },
+    { name = "expose.ingress.hosts.core", value = "harbor.${var.cf_default_root_domain}" },
+    { name = "harborAdminPassword", value = var.harbor_admin_password },
+    # Force to schedule on amd64 node, since harbor images are not available for arm64 architecture
+    { name = "nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "nginx.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "portal.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "core.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "jobservice.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "registry.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "trivy.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "database.internal.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "redis.internal.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "exporter.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    # PVCs used in harbor
+    { name = "persistence.persistentVolumeClaim.registry.existingClaim", value = "harbor-registry-pvc" },
+    { name = "persistence.persistentVolumeClaim.database.existingClaim", value = "harbor-database-pvc" },
+    { name = "persistence.persistentVolumeClaim.jobservice.jobLog.existingClaim", value = "harbor-jobservice-pvc" },
+    { name = "persistence.persistentVolumeClaim.redis.existingClaim", value = "harbor-redis-pvc" },
+    { name = "persistence.persistentVolumeClaim.trivy.existingClaim", value = "harbor-trivy-pvc" },
+    # Resource limits
+    { name = "resources.limits.cpu", value = "1000m" },
+    { name = "resources.limits.memory", value = "1Gi" }
+  ]
+  depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.cert_manager_helm, module.longhorn_helm, module.harbor_registry_pvc, module.harbor_database_pvc, module.harbor_jobservice_pvc, module.harbor_redis_pvc, module.harbor_trivy_pvc]
 }

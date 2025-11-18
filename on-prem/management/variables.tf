@@ -69,6 +69,11 @@ variable "jenkins_version" {
   type        = string
   default     = "5.8.108"
 }
+variable "harbor_version" {
+  description = "Version of Harbor Helm chart"
+  type        = string
+  default     = "1.18.0"
+}
 
 # Specific configurations
 # Jenkins
