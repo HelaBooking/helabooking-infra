@@ -226,7 +226,17 @@ module "harbor_helm" {
     { name = "externalURL", value = "https://harbor.${var.cf_default_root_domain}/" },
     { name = "expose.tls.auto.commonName", value = "harbor.${var.cf_default_root_domain}" },
     { name = "harborAdminPassword", value = var.harbor_admin_password },
-    { name = "nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" }, # Since Harbor is not support arm architecture for all pods
+    # Force to schedule on amd64 node, since harbor images are not available for arm64 architecture
+    { name = "nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "nginx.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "portal.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "core.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "jobservice.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "registry.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "trivy.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "database.internal.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "redis.internal.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
+    { name = "exporter.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
     # PVCs used in harbor
     { name = "persistence.persistentVolumeClaim.registry.existingClaim", value = "harbor-registry-pvc" },
     { name = "persistence.persistentVolumeClaim.database.existingClaim", value = "harbor-database-pvc" },
