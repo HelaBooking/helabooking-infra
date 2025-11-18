@@ -221,6 +221,7 @@ module "harbor_helm" {
   namespace        = kubernetes_namespace.management.metadata[0].name
   chart_version    = var.harbor_version
   set_values = [
+    { name = "imagePullPolicy", value = "Always" },
     { name = "expose.type", value = "ClusterIP" },
     { name = "externalURL", value = "https://harbor.${var.cf_default_root_domain}/" },
     { name = "expose.tls.auto.commonName", value = "harbor.${var.cf_default_root_domain}" },
