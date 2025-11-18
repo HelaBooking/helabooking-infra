@@ -223,7 +223,7 @@ module "harbor_helm" {
   set_values = [
     { name = "imagePullPolicy", value = "Always" },
     { name = "expose.type", value = "ClusterIP" },
-    { name = "externalURL", value = "http://harbor.${var.cf_default_root_domain}/" },
+    { name = "externalURL", value = "http://harbor.${var.cf_default_root_domain}" },
     { name = "expose.tls.auto.commonName", value = "harbor.${var.cf_default_root_domain}" },
     { name = "harborAdminPassword", value = var.harbor_admin_password },
     # Force to schedule on amd64 node, since harbor images are not available for arm64 architecture
