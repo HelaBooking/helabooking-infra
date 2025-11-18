@@ -223,6 +223,7 @@ module "harbor_helm" {
   set_values = [
     { name = "expose.type", value = "ClusterIP" },
     { name = "externalURL", value = "https://harbor.${var.cf_default_root_domain}/" },
+    { name = "expose.tls.auto.commonName", value = "harbor.${var.cf_default_root_domain}" },
     { name = "harborAdminPassword", value = var.harbor_admin_password },
     # PVCs used in harbor
     { name = "persistence.persistentVolumeClaim.registry.existingClaim", value = "harbor-registry-pvc" },
