@@ -226,6 +226,7 @@ module "harbor_helm" {
     { name = "externalURL", value = "https://harbor.${var.cf_default_root_domain}/" },
     { name = "expose.tls.auto.commonName", value = "harbor.${var.cf_default_root_domain}" },
     { name = "harborAdminPassword", value = var.harbor_admin_password },
+    { name = "nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" }, # Since Harbor is not support arm architecture for all pods
     # PVCs used in harbor
     { name = "persistence.persistentVolumeClaim.registry.existingClaim", value = "harbor-registry-pvc" },
     { name = "persistence.persistentVolumeClaim.database.existingClaim", value = "harbor-database-pvc" },
