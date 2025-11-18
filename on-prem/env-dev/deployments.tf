@@ -1,86 +1,72 @@
 # Deploying following resources:
+## Microservices
+# - TBD
 ## App Services
-# - RabbitMQ
-# - Redis
+# + RabbitMQ
+# + Redis
 ## Supporting Services
 # - Istio (Per Namespace)
-# - Grafana & Prometheus
-# - OpenSearch & OpenSearch Dashboard with Fluent Bit
+# - Grafana & Prometheus (as Operators)
+# - OpenSearch & OpenSearch Dashboard
 
+################################ Microservice Resources ################################
+# TBD
 
+################################ App Service Resources ################################
 
-# Deploying CouchDB using Helm
-module "couchdb_helm" {
-  source = "../cluster-templates/helm-chart"
-
-  chart_name       = "couchdb"
-  chart_repository = "https://apache.github.io/couchdb-helm/"
-  chart            = "couchdb"
+# Deploying RabbitMQ
+module "rabbitmq_helm" {
+  source           = "../cluster-templates/helm-chart"
+  chart_name       = "rabbitmq"
+  chart_repository = "oci://registry-1.docker.io/bitnamicharts"
+  chart            = "rabbitmq"
   namespace        = var.namespace
-  chart_version    = var.couchdb_helm_version
+  chart_version    = var.rabbitmq_helm_version
   set_values = [
-    { name = "couchdbConfig.couchdb.uuid", value = var.couchdb_uuid },
-    { name = "adminUsername", value = var.couchdb_username },
-    { name = "adminPassword", value = var.couchdb_password },
-    { name = "clusterSize", value = "1" },
-    # Volume configurations
-    { name = "persistentVolume.enabled", value = "true" },
-    { name = "persistentVolume.size", value = "1Gi" },
-    { name = "persistentVolume.storageClass", value = "longhorn-sc" },
-
-    # Specific configurations
-    { name = "couchdbConfig.chttpd.bind_address", value = "0.0.0.0" },
-    { name = "couchdbConfig.httpd.bind_address", value = "0.0.0.0" },
-    { name = "couchdbConfig.prometheus.bind_address", value = "0.0.0.0" },
-    { name = "couchdbConfig.chttpd.enable_cors", value = "true" },
-    { name = "couchdbConfig.cors.origins", value = "*" },
-    { name = "podLabels.app", value = "couchdb" },
-    { name = "service.enabled", value = "false" },
+    { name = "image.repository", value = "bitnamilegacy/rabbitmq" }, # no longer provides latests version free of charge
+    { name = "global.security.allowInsecureImages", value = "true" },
+    { name = "auth.username", value = var.rabbitmq_username },
+    { name = "auth.password", value = var.rabbitmq_password },
+    { name = "auth.erlangCookie", value = var.rabbitmq_erlang_cookie },
+    { name = "replicaCount", value = "1" },
+    { name = "persistence.existingClaim", value = "rabbitmq-data-pvc" },
+    { name = "podLabels.app", value = "rabbitmq" },
+    { name = "service.type", value = "ClusterIP" },
+    { name = "service.ports.amqp", value = "5672" },
+    { name = "service.ports.management", value = "15672" },
+    # Resource specifications
+    { name = "resources.limits.memory", value = "512Mi" },
+    { name = "resources.limits.cpu", value = "500m" },
+    { name = "memoryHighWatermark.enabled", value = "true" },
+    { name = "memoryHighWatermark.type", value = "absolute" },
+    { name = "memoryHighWatermark.value", value = "256Mi" }
   ]
-  depends_on = [kubernetes_namespace.env_dev]
+  depends_on = [kubernetes_namespace.env_dev, module.rabbitmq_data_pvc]
 }
 
-# Deploying PostgreSQL
-module "postgresql_deployment" {
-  source = "../cluster-templates/deployment"
-
-  app_name       = "postgresql"
-  namespace      = var.namespace
-  replicas       = 1
-  selector_label = "postgresql"
-  app_image      = "postgres:${var.postgresql_image}"
-  container_ports = [
-    {
-      name  = "postgres"
-      value = 5432
-    }
+# Deploying Redis
+module "redis_helm" {
+  source           = "../cluster-templates/helm-chart"
+  chart_name       = "redis"
+  chart_repository = "oci://registry-1.docker.io/bitnamicharts"
+  chart            = "redis"
+  namespace        = var.namespace
+  chart_version    = var.redis_helm_version
+  set_values = [
+    { name = "architecture", value = "standalone" },
+    { name = "auth.enabled", value = "true" },
+    { name = "auth.password", value = var.redis_password },
+    { name = "master.persistence.existingClaim", value = "redis-data-pvc" },
+    { name = "master.podLabels.app", value = "redis" },
+    { name = "master.service.type", value = "ClusterIP" },
+    { name = "master.service.port", value = "6379" },
+    # Resource specifications
+    { name = "master.resources.limits.memory", value = "256Mi" },
+    { name = "master.resources.limits.cpu", value = "250m" }
   ]
-  cpu_request    = "250m"
-  memory_request = "256Mi"
-  env_variable = [
-    {
-      name  = "POSTGRES_USER"
-      value = var.postgresql_username
-    },
-    {
-      name  = "POSTGRES_PASSWORD"
-      value = var.postgresql_password
-    },
-    {
-      name  = "POSTGRES_DB"
-      value = var.postgresql_database
-    },
-    {
-      name  = "PGDATA"
-      value = "/var/lib/postgresql/data/pgdata"
-    }
-  ]
-  volume_configs = [
-    {
-      name       = "postgresql-data"
-      mount_path = "/var/lib/postgresql/data/"
-      pvc_name   = "postgresql-data-pvc"
-    }
-  ]
-  depends_on_resource = [kubernetes_namespace.env_dev, module.postgresql_data_pvc]
+  depends_on = [kubernetes_namespace.env_dev, module.redis_data_pvc]
 }
+
+
+
+################################ Supporting Service Resources ################################

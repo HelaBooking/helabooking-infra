@@ -38,3 +38,55 @@ module "jenkins_pvc" {
   storage_request     = "10Gi"
   depends_on_resource = [kubernetes_namespace.management, module.longhorn_helm]
 }
+
+# PVCs for Harbor
+module "harbor_registry_pvc" {
+  source = "../cluster-templates/pv-claim"
+
+  pvc_name            = "harbor-registry-pvc"
+  namespace           = kubernetes_namespace.management.metadata[0].name
+  app_selector        = "harbor"
+  access_modes        = ["ReadWriteMany"]
+  storage_request     = "10Gi"
+  depends_on_resource = [kubernetes_namespace.management, module.longhorn_helm]
+}
+module "harbor_database_pvc" {
+  source = "../cluster-templates/pv-claim"
+
+  pvc_name            = "harbor-database-pvc"
+  namespace           = kubernetes_namespace.management.metadata[0].name
+  app_selector        = "harbor"
+  access_modes        = ["ReadWriteMany"]
+  storage_request     = "0.5Gi"
+  depends_on_resource = [kubernetes_namespace.management, module.longhorn_helm]
+}
+module "harbor_jobservice_pvc" {
+  source = "../cluster-templates/pv-claim"
+
+  pvc_name            = "harbor-jobservice-pvc"
+  namespace           = kubernetes_namespace.management.metadata[0].name
+  app_selector        = "harbor"
+  access_modes        = ["ReadWriteMany"]
+  storage_request     = "0.5Gi"
+  depends_on_resource = [kubernetes_namespace.management, module.longhorn_helm]
+}
+module "harbor_redis_pvc" {
+  source = "../cluster-templates/pv-claim"
+
+  pvc_name            = "harbor-redis-pvc"
+  namespace           = kubernetes_namespace.management.metadata[0].name
+  app_selector        = "harbor"
+  access_modes        = ["ReadWriteMany"]
+  storage_request     = "0.5Gi"
+  depends_on_resource = [kubernetes_namespace.management, module.longhorn_helm]
+}
+module "harbor_trivy_pvc" {
+  source = "../cluster-templates/pv-claim"
+
+  pvc_name            = "harbor-trivy-pvc"
+  namespace           = kubernetes_namespace.management.metadata[0].name
+  app_selector        = "harbor"
+  access_modes        = ["ReadWriteMany"]
+  storage_request     = "2Gi"
+  depends_on_resource = [kubernetes_namespace.management, module.longhorn_helm]
+}
