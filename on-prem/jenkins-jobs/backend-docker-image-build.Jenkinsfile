@@ -7,7 +7,7 @@ pipeline {
         HARBOR_AUTH = credentials('harbor-credentials')
         // Git ENVs
         GIT_AUTH = credentials('git-org-credentials')
-        BACKEND_REPO = "https://github.com/HelaBooking/helabooking-backend.git"
+        BACKEND_REPO = "github.com/HelaBooking/helabooking-backend.git"
         // Backend Services
         // SERVICES = Refer Line 59
     }
