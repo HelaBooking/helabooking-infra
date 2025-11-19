@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         // Harbor ENVs
+        HARBOR_HOSTNAME = "harbor.management.ezbooking.lk"
         REGISTRY = "https://harbor.management.ezbooking.lk/helabooking"
         HARBOR_AUTH = credentials('harbor-credentials')
         // Git ENVs
@@ -10,6 +11,8 @@ pipeline {
         BACKEND_REPO = "https://github.com/HelaBooking/helabooking-backend.git"
         // Backend Services
         SERVICES = ["user-service", "event-service", "booking-service", "ticketing-service", "notification-service", "audit-service"]
+        // Image Building Container
+        BUILDKIT_CONTAINER = "buildkit"
     }
 
     stages {
@@ -20,10 +23,10 @@ pipeline {
                     sh '''
                         echo "> 📁 Preparing backend repo folder..."
 
-                        if [ ! -d "/home/jenkins/agent/image-build" ]; then
-                            mkdir -p /home/jenkins/agent/image-build
+                        if [ ! -d "/home/jenkins/agent/workspace/image-build" ]; then
+                            mkdir -p /home/jenkins/agent/workspace/image-build
                         fi
-                        cd /home/jenkins/agent/image-build
+                        cd /home/jenkins/agent/workspace/image-build
 
                         if [ ! -d "backend" ]; then
                             echo "> ⬇️ Cloning backend repo..."
@@ -46,11 +49,11 @@ pipeline {
         stage('Preparing Build') {
             steps {
                 script {
-                    sh "cd /home/jenkins/agent/image-build/backend && git fetch --prune"
+                    sh "cd /home/jenkins/agent/workspace/image-build/backend && git fetch --prune"
 
                     // Detect changed files
                     def changes = sh(
-                        script: "cd /home/jenkins/agent/image-build/backend && git diff --name-only HEAD~1 HEAD",
+                        script: "cd /home/jenkins/agent/workspace/image-build/backend && git diff --name-only HEAD~1 HEAD",
                         returnStdout: true
                     ).trim().split("\n")
 
@@ -80,7 +83,7 @@ pipeline {
 
                     // Tag based on branch
                     def shortCommit = sh(
-                        script: "cd /home/jenkins/agent/image-build/backend && git rev-parse --short HEAD",
+                        script: "cd /home/jenkins/agent/workspace/image-build/backend && git rev-parse --short HEAD",
                         returnStdout: true
                     ).trim()
 
@@ -98,22 +101,44 @@ pipeline {
             when { expression { return !skipBuild } }
             steps {
                 script {
-                    SERVICES_TO_BUILD.each { svc ->
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'harbor-credentials',
+                            usernameVariable: 'HARBOR_USER',
+                            passwordVariable: 'HARBOR_PASS'
+                        )
+                    ]) {
+                        // Create auth file for buildkit push
+                        sh '''
+                            if [ ! -d "/workspace/.docker" ]; then
+                                echo "> 🗝 Writing Docker auth config for BuildKit..."
+                                mkdir -p /workspace/.docker
+                                echo '{"auths":{"${REGISTRY}":{"username":"${HARBOR_USER}","password":"${HARBOR_PASS}"}}}' > /workspace/.docker/config.json
+                            fi
+                        '''
+                        // Build and push images
+                        SERVICES_TO_BUILD.each { svc ->
 
-                        echo "> 🔨 Building image for ${svc}"
+                            echo "> 🔨 Building image for ${svc}..."
 
-                        sh """
-                            /kaniko/executor \
-                                --dockerfile=/home/jenkins/agent/image-build/backend/${svc}/Dockerfile \
-                                --context=/home/jenkins/agent/image-build/backend/${svc} \
-                                --destination=${REGISTRY}/${svc}:${IMAGE_TAG}
-                        """
+                            container("${BUILDKIT_CONTAINER}") {
+                                sh """
+                                    buildctl build \
+                                        --frontend=dockerfile.v0 \
+                                        --local context=/workspace/image-build/backend/${svc} \
+                                        --local dockerfile=/workspace/image-build/backend/${svc} \
+                                        --output type=registry,registry.insecure=true,tlsservername=${HARBOR_HOSTNAME},name=${REGISTRY}/${svc}:${IMAGE_TAG},push=true
 
-                        echo "> 📤 Pushed ${svc}:${IMAGE_TAG} to ${REGISTRY}"
+                                        --import-cache type=registry,ref=${REGISTRY}/${svc}:cache \
+                                        --export-cache type=registry,ref=${REGISTRY}/${svc}:cache,mode=max
+                                """
+                            }
+
+                            echo "> 📤 Pushed ${svc}:${IMAGE_TAG} to ${REGISTRY}"
+                        }
                     }
                 }
             }
         }
-
     }
 }

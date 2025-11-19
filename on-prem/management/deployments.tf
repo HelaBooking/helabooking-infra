@@ -196,6 +196,12 @@ module "jenkins_helm" {
     { name = "agent.runAsGroup", value = "0" },
     { name = "agent.resources.limits.cpu", value = "1000m" },
     { name = "agent.resources.limits.memory", value = "1Gi" },
+    # Additional Containers - BuildKit
+    { name = "agent.additionalContainers", value = var.jenkins_buildkit_container },
+    { name = "agent.volumes[0].name", value = "workspace-volume" },
+    { name = "agent.volumes[0].emptyDir", value = "{}" },
+    { name = "agent.volumes[1].name", value = "buildkit-socket" },
+    { name = "agent.volumes[1].emptyDir", value = "{}" },
     # Plugins
     {
       name = "controller.additionalPlugins",
