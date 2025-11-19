@@ -179,6 +179,9 @@ module "jenkins_helm" {
   chart            = "jenkins"
   namespace        = kubernetes_namespace.management.metadata[0].name
   chart_version    = var.jenkins_version
+  # Custom Values
+  custom_values = var.jenkins_buildkit_container
+
   set_values = [
     { name = "controller.admin.password", value = var.jenkins_admin_password },
     { name = "controller.serviceType", value = "ClusterIP" },
@@ -197,7 +200,6 @@ module "jenkins_helm" {
     { name = "agent.resources.limits.cpu", value = "1000m" },
     { name = "agent.resources.limits.memory", value = "1Gi" },
     # Additional Containers - BuildKit
-    { name = "agent.additionalContainers", value_list = [var.jenkins_buildkit_container] },
     { name = "agent.volumes[0].name", value = "workspace-volume" },
     { name = "agent.volumes[0].emptyDir", value = "{}" },
     { name = "agent.volumes[1].name", value = "buildkit-socket" },

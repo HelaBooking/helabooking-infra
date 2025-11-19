@@ -86,22 +86,24 @@ variable "jenkins_buildkit_container" {
   description = "YAML configuration for Jenkins BuildKit container"
   type        = string
   default     = <<EOT
-- sideContainerName: buildkit
-  image:
-    repository: moby/buildkit
-    tag: latest
-  args: ["--oci-worker-no-process-sandbox"]
-  securityContext:
-    runAsUser: 0
-    runAsGroup: 0
-    privileged: true
-  volumeMounts:
-    - name: workspace-volume
-      mountPath: /workspace
-    - name: workspace-volume
-      mountPath: /root/.docker
-      subPath: .docker
-    - name: buildkit-socket
-      mountPath: /run/buildkit
+agent:
+  additionalContainers:
+    - sideContainerName: buildkit
+      image:
+        repository: moby/buildkit
+        tag: latest
+      args: ["--oci-worker-no-process-sandbox"]
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        privileged: true
+      volumeMounts:
+        - name: workspace-volume
+          mountPath: /workspace
+        - name: workspace-volume
+          mountPath: /root/.docker
+          subPath: .docker
+        - name: buildkit-socket
+          mountPath: /run/buildkit
 EOT
 }
