@@ -56,9 +56,10 @@ pipeline {
 
                     echo "Changed files: ${changes}"
 
-                    ALL_SERVICES = ["user-service", "event-service", "booking-service", "ticketing-service", "notification-service", "audit-service"]
-                    SERVICES_TO_BUILD = []
-                    skipBuild = false
+                    def ALL_SERVICES = ["user-service", "event-service", "booking-service", "ticketing-service", "notification-service", "audit-service"]
+                    def SERVICES_TO_BUILD = []
+                    def skipBuild = false
+                    def IMAGE_TAG = ""
 
                     def commonChanged = changes.any { it.startsWith("common/") }
                     def rootPomChanged = changes.contains("pom.xml")
