@@ -4,13 +4,12 @@ pipeline {
     environment {
         // Harbor ENVs
         HARBOR_HOSTNAME = "harbor.management.ezbooking.lk"
-        REGISTRY = "https://harbor.management.ezbooking.lk/helabooking"
+        REGISTRY = "harbor.management.ezbooking.lk/helabooking"
         HARBOR_AUTH = credentials('harbor-credentials')
         // Git ENVs
         GIT_AUTH = credentials('git-org-credentials')
-        BACKEND_REPO = "https://github.com/HelaBooking/helabooking-backend.git"
-        // Backend Services
-        SERVICES = ["user-service", "event-service", "booking-service", "ticketing-service", "notification-service", "audit-service"]
+        BACKEND_REPO = "github.com/HelaBooking/helabooking-backend.git"
+        // SERVICES = Refer Line 59
         // Image Building Container
         BUILDKIT_CONTAINER = "buildkit"
     }
@@ -59,9 +58,10 @@ pipeline {
 
                     echo "Changed files: ${changes}"
 
-                    ALL_SERVICES = ${SERVICES}
-                    SERVICES_TO_BUILD = []
-                    skipBuild = false
+                    def ALL_SERVICES = ["user-service", "event-service", "booking-service", "ticketing-service", "notification-service", "audit-service"]
+                    def SERVICES_TO_BUILD = []
+                    def skipBuild = false
+                    def IMAGE_TAG = ""
 
                     def commonChanged = changes.any { it.startsWith("common/") }
                     def rootPomChanged = changes.contains("pom.xml")
