@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // Harbor ENVs
-        HARBOR_HOSTNAME = "harbor.management.ezbooking.lk"
+        REGISTRY_HOSTNAME = "harbor.management.ezbooking.lk"
         REGISTRY = "harbor.management.ezbooking.lk/helabooking"
         HARBOR_AUTH = credentials('harbor-credentials')
         // Git ENVs
@@ -127,7 +127,7 @@ pipeline {
                                         --frontend=dockerfile.v0 \
                                         --local context=/workspace/image-build/backend/${svc} \
                                         --local dockerfile=/workspace/image-build/backend/${svc} \
-                                        --output type=registry,registry.insecure=true,tlsservername=${HARBOR_HOSTNAME},name=${REGISTRY}/${svc}:${IMAGE_TAG},push=true
+                                        --output type=registry,registry.insecure=true,tlsservername=${REGISTRY_HOSTNAME},name=${REGISTRY}/${svc}:${IMAGE_TAG},push=true
 
                                         --import-cache type=registry,ref=${REGISTRY}/${svc}:cache \
                                         --export-cache type=registry,ref=${REGISTRY}/${svc}:cache,mode=max
