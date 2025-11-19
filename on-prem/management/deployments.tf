@@ -189,16 +189,7 @@ module "jenkins_helm" {
     { name = "controller.resources.limits.memory", value = "2Gi" },
     { name = "persistence.existingClaim", value = "jenkins-pvc" },
     { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
-    # Agent configs
-    { name = "agent.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_agent_node_selector_hostname },
-    { name = "agent.podName", value = "jenkins-agent" },
-    { name = "agent.idleMinutes", value = "10080" }, # 7 days
-    { name = "agent.hostNetworking", value = "false" },
-    { name = "agent.privileged", value = "true" },
-    { name = "agent.runAsUser", value = "0" },
-    { name = "agent.runAsGroup", value = "0" },
-    { name = "agent.resources.limits.cpu", value = "1000m" },
-    { name = "agent.resources.limits.memory", value = "1Gi" },
+    # Agent configs - Defined in the custom_values variable
     # Plugins
     {
       name = "controller.additionalPlugins",

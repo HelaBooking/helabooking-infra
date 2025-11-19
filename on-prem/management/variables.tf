@@ -87,6 +87,30 @@ variable "jenkins_agent_config" {
   type        = string
   default     = <<EOT
 agent:
+  podName: "jenkins-agent"
+  # Node Selection
+  nodeSelector:
+    kubernetes.io/hostname: "galaxy-node"
+  
+  # Agent Lifecycle
+  idleMinutes: 10080
+  
+  # Permissions & Networking
+  hostNetworking: false
+  privileged: true
+  runAsUser: 0
+  runAsGroup: 0
+  
+  # Main JNLP Container Resources
+  resources:
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+    requests:
+      cpu: "512m"
+      memory: "512Mi"
+
+  # Sidecar (BuildKit)
   additionalContainers:
     - sideContainerName: buildkit
       image:
@@ -105,6 +129,8 @@ agent:
           subPath: .docker
         - name: buildkit-socket
           mountPath: /run/buildkit
+
+  # Volumes
   volumes:
     - name: workspace-volume
       emptyDir: {}
