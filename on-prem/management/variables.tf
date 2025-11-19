@@ -82,7 +82,7 @@ variable "jenkins_agent_node_selector_hostname" {
   type        = string
   default     = "galaxy-node"
 }
-variable "jenkins_buildkit_container" {
+variable "jenkins_agent_config" {
   description = "YAML configuration for Jenkins BuildKit container"
   type        = string
   default     = <<EOT
@@ -105,5 +105,10 @@ agent:
           subPath: .docker
         - name: buildkit-socket
           mountPath: /run/buildkit
+  volumes:
+    - name: workspace-volume
+      emptyDir: {}
+    - name: buildkit-socket
+      emptyDir: {}
 EOT
 }
