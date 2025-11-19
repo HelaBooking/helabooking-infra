@@ -82,24 +82,64 @@ variable "jenkins_agent_node_selector_hostname" {
   type        = string
   default     = "galaxy-node"
 }
-variable "jenkins_buildkit_container" {
+variable "jenkins_agent_config" {
   description = "YAML configuration for Jenkins BuildKit container"
   type        = string
   default     = <<EOT
-- name: buildkit
-  image: moby/buildkit:latest
-  args: ["--oci-worker-no-process-sandbox"]
-  securityContext:
-    runAsUser: 0
-    runAsGroup: 0
-    privileged: true
-  volumeMounts:
-    - name: workspace-volume
-      mountPath: /workspace
-    - name: workspace-volume
-      mountPath: /root/.docker
-      subPath: .docker
-    - name: buildkit-socket
-      mountPath: /run/buildkit
+agent:
+  podName: "jenkins-agent"
+  # Node Selection 
+  nodeSelector:
+    kubernetes.io/hostname: "galaxy-node"
+  
+  # Agent Lifecycle
+  idleMinutes: 10080
+  
+  # Permissions & Networking
+  hostNetworking: false
+  privileged: true
+  runAsUser: 0
+  runAsGroup: 0
+  
+  # Main JNLP Container Resources
+  resources:
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+    requests:
+      cpu: "512m"
+      memory: "512Mi"
+
+  # Sidecar (BuildKit)
+  additionalContainers:
+    - sideContainerName: buildkit
+      image:
+        repository: moby/buildkit
+        tag: latest
+      args: ""
+      privileged: true
+      securityContext:
+        privileged: true
+        runAsUser: 0
+        runAsGroup: 0
+      resources:
+        limits:
+          cpu: "1000m"
+          memory: "1Gi"
+        requests:
+          cpu: "500m"
+          memory: "512Mi"
+      volumeMounts:
+        - name: workspace-volume
+          mountPath: /workspace
+        - name: buildkit-socket
+          mountPath: /run/buildkit
+
+  # Volumes
+  yamlTemplate: |
+      spec:
+        volumes:
+          - name: buildkit-socket
+            emptyDir: {}
 EOT
 }

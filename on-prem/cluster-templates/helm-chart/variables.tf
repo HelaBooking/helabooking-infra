@@ -35,6 +35,11 @@ variable "set_values" {
   }))
   default = []
 }
+variable "custom_values" {
+  description = "Raw YAML string for complex configurations (lists of objects, etc.)"
+  type        = string
+  default     = ""
+}
 variable "depends_on_resource" {
   description = "Resource that this service depends on"
   type        = any

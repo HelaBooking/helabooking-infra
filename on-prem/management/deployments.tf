@@ -179,6 +179,9 @@ module "jenkins_helm" {
   chart            = "jenkins"
   namespace        = kubernetes_namespace.management.metadata[0].name
   chart_version    = var.jenkins_version
+  # Custom Values
+  custom_values = var.jenkins_agent_config
+
   set_values = [
     { name = "controller.admin.password", value = var.jenkins_admin_password },
     { name = "controller.serviceType", value = "ClusterIP" },
@@ -186,22 +189,7 @@ module "jenkins_helm" {
     { name = "controller.resources.limits.memory", value = "2Gi" },
     { name = "persistence.existingClaim", value = "jenkins-pvc" },
     { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
-    # Agent configs
-    { name = "agent.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_agent_node_selector_hostname },
-    { name = "agent.podName", value = "jenkins-agent" },
-    { name = "agent.idleMinutes", value = "10080" }, # 7 days
-    { name = "agent.hostNetworking", value = "false" },
-    { name = "agent.privileged", value = "true" },
-    { name = "agent.runAsUser", value = "0" },
-    { name = "agent.runAsGroup", value = "0" },
-    { name = "agent.resources.limits.cpu", value = "1000m" },
-    { name = "agent.resources.limits.memory", value = "1Gi" },
-    # Additional Containers - BuildKit
-    { name = "agent.additionalContainers", value = var.jenkins_buildkit_container },
-    { name = "agent.volumes[0].name", value = "workspace-volume" },
-    { name = "agent.volumes[0].emptyDir", value = "{}" },
-    { name = "agent.volumes[1].name", value = "buildkit-socket" },
-    { name = "agent.volumes[1].emptyDir", value = "{}" },
+    # Agent configs - Defined in the custom_values variable
     # Plugins
     {
       name = "controller.additionalPlugins",
