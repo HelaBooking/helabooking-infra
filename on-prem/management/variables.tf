@@ -116,7 +116,6 @@ agent:
       image:
         repository: moby/buildkit
         tag: latest
-      args: "--oci-worker-no-process-sandbox"
       privileged: true
       securityContext:
         privileged: true
