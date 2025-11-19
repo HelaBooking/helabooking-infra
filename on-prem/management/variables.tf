@@ -125,6 +125,9 @@ agent:
         limits:
           cpu: "1000m"
           memory: "1Gi"
+        requests:
+          cpu: "500m"
+          memory: "512Mi"
       volumeMounts:
         - name: workspace-volume
           mountPath: /workspace
