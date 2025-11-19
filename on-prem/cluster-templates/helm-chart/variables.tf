@@ -31,7 +31,7 @@ variable "set_values" {
     name = string
     # value is string or list of strings
     value      = optional(string)
-    value_list = optional(list(string))
+    value_list = optional(list(any))
   }))
   default = []
 }
