@@ -117,6 +117,7 @@ agent:
         repository: moby/buildkit
         tag: latest
       args: "--oci-worker-no-process-sandbox"
+      privileged: true
       securityContext:
         privileged: true
         runAsUser: 0
@@ -135,8 +136,10 @@ agent:
           mountPath: /run/buildkit
 
   # Volumes
-  volumes:
-    - name: buildkit-socket
-      emptyDir: {}
+  yamlTemplate: |
+      spec:
+        volumes:
+          - name: buildkit-socket
+            emptyDir: {}
 EOT
 }
