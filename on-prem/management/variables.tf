@@ -116,6 +116,7 @@ agent:
       image:
         repository: moby/buildkit
         tag: latest
+      args: ""
       privileged: true
       securityContext:
         privileged: true
