@@ -84,32 +84,22 @@ variable "jenkins_agent_node_selector_hostname" {
 }
 variable "jenkins_buildkit_container" {
   description = "YAML configuration for Jenkins BuildKit container"
-  type        = any
-  default = [
-    {
-      name  = "buildkit"
-      image = "moby/buildkit:latest"
-      args  = ["--oci-worker-no-process-sandbox"]
-      securityContext = {
-        runAsUser  = 0
-        runAsGroup = 0
-        privileged = true
-      }
-      volumeMounts = [
-        {
-          name      = "workspace-volume"
-          mountPath = "/workspace"
-        },
-        {
-          name      = "workspace-volume"
-          mountPath = "/root/.docker"
-          subPath   = ".docker"
-        },
-        {
-          name      = "buildkit-socket"
-          mountPath = "/run/buildkit"
-        }
-      ]
-    }
-  ]
+  type        = string
+  default     = <<EOT
+- name: buildkit
+  image: moby/buildkit:latest
+  args: ["--oci-worker-no-process-sandbox"]
+  securityContext:
+    runAsUser: 0
+    runAsGroup: 0
+    privileged: true
+  volumeMounts:
+    - name: workspace-volume
+      mountPath: /workspace
+    - name: workspace-volume
+      mountPath: /root/.docker
+      subPath: .docker
+    - name: buildkit-socket
+      mountPath: /run/buildkit
+EOT
 }
