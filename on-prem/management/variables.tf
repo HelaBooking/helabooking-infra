@@ -84,7 +84,7 @@ variable "jenkins_agent_node_selector_hostname" {
 }
 variable "jenkins_buildkit_container" {
   description = "YAML configuration for Jenkins BuildKit container"
-  type        = string
+  type        = any
   default = [
     {
       name  = "buildkit"
