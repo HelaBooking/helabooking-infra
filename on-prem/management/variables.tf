@@ -92,7 +92,7 @@ agent:
       image:
         repository: moby/buildkit
         tag: latest
-      args: ["--oci-worker-no-process-sandbox"]
+      args: "--oci-worker-no-process-sandbox"
       securityContext:
         runAsUser: 0
         runAsGroup: 0
