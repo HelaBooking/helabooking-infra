@@ -88,7 +88,7 @@ variable "jenkins_agent_config" {
   default     = <<EOT
 agent:
   podName: "jenkins-agent"
-  # Node Selection
+  # Node Selection 
   nodeSelector:
     kubernetes.io/hostname: "galaxy-node"
   
@@ -118,22 +118,21 @@ agent:
         tag: latest
       args: "--oci-worker-no-process-sandbox"
       securityContext:
+        privileged: true
         runAsUser: 0
         runAsGroup: 0
-        privileged: true
+      resources:
+        limits:
+          cpu: "1000m"
+          memory: "1Gi"
       volumeMounts:
         - name: workspace-volume
           mountPath: /workspace
-        - name: workspace-volume
-          mountPath: /root/.docker
-          subPath: .docker
         - name: buildkit-socket
           mountPath: /run/buildkit
 
   # Volumes
   volumes:
-    - name: workspace-volume
-      emptyDir: {}
     - name: buildkit-socket
       emptyDir: {}
 EOT
