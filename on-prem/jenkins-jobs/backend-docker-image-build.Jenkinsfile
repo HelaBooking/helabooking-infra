@@ -3,7 +3,6 @@ def skipBuild = false
 def allServices = ["user-service", "event-service", "booking-service", "ticketing-service", "notification-service", "audit-service"]
 def servicesToBuild = []
 def imageTag = ""
-// List to store build metadata for the summary
 def buildResults = []
 
 pipeline {
@@ -17,8 +16,9 @@ pipeline {
         // Git ENVs
         GIT_AUTH = credentials('git-org-credentials')
         BACKEND_REPO = "github.com/HelaBooking/helabooking-backend.git"
-        // Image Building Container
+        // BuildKit Container Name
         BUILDKIT_CONTAINER = "buildkit"
+        // Paths
         AGENT_HOME = "/home/jenkins/agent"
         WORKSPACE_DIR = "${AGENT_HOME}/workspace/image-build"
     }
@@ -129,6 +129,7 @@ pipeline {
                             // 2. Iterate and Build
                             servicesToBuild.each { svc ->
                                 def startTime = System.currentTimeMillis()
+                                def metadataFileName = "metadata-${svc}.json"
                                 
                                 // Visual Separator for Logs
                                 printHeader(svc, imageTag)
@@ -144,7 +145,7 @@ pipeline {
                                                 --output type=image,registry.insecure=true,name=${REGISTRY}/${svc}:${imageTag},push=true \
                                                 --import-cache type=registry,ref=${REGISTRY}/${svc}:cache \
                                                 --export-cache type=registry,ref=${REGISTRY}/${svc}:cache,mode=max \
-                                                --metadata-file ${AGENT_HOME}/metadata-${svc}.json
+                                                --metadata-file ${metadataFileName}
                                         """
                                     }
                                 }
@@ -152,12 +153,19 @@ pipeline {
                                 // Calculate duration
                                 def duration = (System.currentTimeMillis() - startTime) / 1000
                                 
-                                // Read image size (approximation via buildctl doesn't give easy size, 
-                                // so we will log the digest and success)
-                                def metadata = readJSON file: "${AGENT_HOME}/metadata-${svc}.json"
-                                def digest = metadata['containerimage.digest']
+                                // Read image size
+                                def digest = "unknown"
+                                if (fileExists(metadataFileName)) {
+                                    def fileContent = readFile(file: metadataFileName)
+                                    // Regex to look for "containerimage.digest": "sha256:..."
+                                    def matcher = (fileContent =~ /"containerimage.digest":\s*"([^"]+)"/)
+                                    if (matcher.find()) {
+                                        digest = matcher[0][1] // Get the capture group
+                                        // Shorten digest for display (sha256:12345... -> 1234567)
+                                        digest = digest.replace("sha256:", "").take(7)
+                                    }
+                                }
                                 
-                                // Store result
                                 buildResults.add([
                                     service: svc,
                                     tag: imageTag,
@@ -165,7 +173,7 @@ pipeline {
                                     digest: digest
                                 ])
 
-                                echo "\033[1;32m> ✅ Successfully pushed ${svc}:${imageTag}\033[0m"
+                                echo "\033[1;32m> ✅ Successfully pushed ${svc}:${imageTag} (Digest: ${digest})\033[0m"
                             }
                         }
                     }
@@ -178,7 +186,7 @@ pipeline {
         always {
             script {
                 if (!skipBuild && !buildResults.isEmpty()) {
-                    printSummary(buildResults, REGISTRY)
+                    printSummary(buildResults)
                 }
             }
         }
@@ -196,19 +204,20 @@ def printHeader(serviceName, tag) {
 """
 }
 
-def printSummary(results, registryUrl) {
-    def summary = """
-\033[1;35m
-================================================================================
-                        🚀 BUILD & PUSH SUMMARY
-================================================================================
-\033[0m"""
+def printSummary(results) {
+    // Header
+    def summary = "\n\033[1;35m================================================================================\n"
+    summary += "                        🚀 BUILD & PUSH SUMMARY\n"
+    summary += "================================================================================\033[0m\n"
     
-    summary += String.format("| %-20s | %-15s | %-10s | %-20s |\n", "Service", "Tag", "Duration", "Status")
-    summary += "|----------------------|-----------------|------------|----------------------|\n"
+    // Table Header
+    // Note: Jenkins console isn't monospaced perfectly, but we try our best
+    summary += String.format("| %-20s | %-15s | %-10s | %-10s |\n", "Service", "Tag", "Time", "Digest")
+    summary += "|----------------------|-----------------|------------|------------|\n"
 
+    // Rows
     results.each { res ->
-        summary += String.format("| %-20s | %-15s | %-10s | \033[1;32m%-20s\033[0m |\n", res.service, res.tag, res.duration, "PUSHED")
+        summary += String.format("| %-20s | %-15s | %-10s | %-10s |\n", res.service, res.tag, res.duration, res.digest)
     }
     
     summary += "================================================================================"
