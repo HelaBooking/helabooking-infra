@@ -5,6 +5,33 @@ def servicesToBuild = []
 def imageTag = ""
 def buildResults = []
 
+// --- TRIGGER CONFIGURATION ---
+def targetRepo = "helabooking-backend"                  // trigger repo name
+def allowedBranchesTriggers = ["dev", "qa"]             // branches allowed to trigger this pipeline
+
+// Apply Trigger ONLY if the current branch is in the allowed list
+if (allowedBranchesTriggers.contains(env.BRANCH_NAME)) {
+    properties([
+        pipelineTriggers([
+            [$class: 'GenericTrigger',
+             // Extract variables from the GitHub JSON Payload
+             genericVariables: [
+                [key: 'REPO_NAME', value: '$.repository.name'],
+                [key: 'REF', value: '$.ref']
+             ],
+             printContributedVariables: true,
+             printPostContent: false,
+             
+             // The Filter:
+             // This constructs a string like "helabooking-backend refs/heads/dev" and checks if it matches the Regex.
+             // It ensures this pipeline ONLY runs if the webhook comes from the backend repo and the branch matches the current pipeline branch.
+             regexpFilterText: '$REPO_NAME $REF',
+             regexpFilterExpression: "^${targetRepo} refs/heads/${env.BRANCH_NAME}\$" 
+            ]
+        ])
+    ])
+}
+
 pipeline {
     agent any
 
@@ -16,8 +43,9 @@ pipeline {
         // Git ENVs
         GIT_AUTH = credentials('git-org-credentials')
         BACKEND_REPO = "github.com/HelaBooking/helabooking-backend.git"
-        // BuildKit Container Name
+        
         BUILDKIT_CONTAINER = "buildkit"
+        
         // Paths
         AGENT_HOME = "/home/jenkins/agent"
         WORKSPACE_DIR = "${AGENT_HOME}/workspace/image-build"
@@ -57,7 +85,6 @@ pipeline {
                 script {
                     sh "cd ${WORKSPACE_DIR}/backend && git fetch --prune"
 
-                    // Detect changed files
                     def changes = sh(
                         script: "cd ${WORKSPACE_DIR}/backend && git diff --name-only HEAD~1 HEAD",
                         returnStdout: true
@@ -89,7 +116,6 @@ pipeline {
                         echo "\033[1;32mServices to build → ${servicesToBuild}\033[0m"
                     }
 
-                    // Tag based on branch
                     def shortCommit = sh(
                         script: "cd ${WORKSPACE_DIR}/backend && git rev-parse --short HEAD",
                         returnStdout: true
@@ -131,12 +157,11 @@ pipeline {
                                 def startTime = System.currentTimeMillis()
                                 def metadataFileName = "metadata-${svc}.json"
                                 
-                                // Visual Separator for Logs
                                 printHeader(svc, imageTag)
 
                                 container("${BUILDKIT_CONTAINER}") {
                                     withEnv(["DOCKER_CONFIG=${AGENT_HOME}/.docker"]) {
-                                        // Build and capture metadata using 'metadata-file'
+                                        // Note: We write metadata-file to current dir (.) so readFile can find it easily
                                         sh """
                                             buildctl build \
                                                 --frontend=dockerfile.v0 \
@@ -150,19 +175,15 @@ pipeline {
                                     }
                                 }
                                 
-                                // Calculate duration
                                 def duration = (System.currentTimeMillis() - startTime) / 1000
                                 
-                                // Read image size
+                                // --- MANUAL JSON PARSING (No Plugin Needed) ---
                                 def digest = "unknown"
                                 if (fileExists(metadataFileName)) {
                                     def fileContent = readFile(file: metadataFileName)
-                                    // Regex to look for "containerimage.digest": "sha256:..."
                                     def matcher = (fileContent =~ /"containerimage.digest":\s*"([^"]+)"/)
                                     if (matcher.find()) {
-                                        digest = matcher[0][1] // Get the capture group
-                                        // Shorten digest for display (sha256:12345... -> 1234567)
-                                        digest = digest.replace("sha256:", "").take(7)
+                                        digest = matcher[0][1].replace("sha256:", "").take(7)
                                     }
                                 }
                                 
@@ -205,22 +226,17 @@ def printHeader(serviceName, tag) {
 }
 
 def printSummary(results) {
-    // Header
     def summary = "\n\033[1;35m================================================================================\n"
     summary += "                        🚀 BUILD & PUSH SUMMARY\n"
     summary += "================================================================================\033[0m\n"
     
-    // Table Header
-    // Note: Jenkins console isn't monospaced perfectly, but we try our best
     summary += String.format("| %-20s | %-15s | %-10s | %-10s |\n", "Service", "Tag", "Time", "Digest")
     summary += "|----------------------|-----------------|------------|------------|\n"
 
-    // Rows
     results.each { res ->
         summary += String.format("| %-20s | %-15s | %-10s | %-10s |\n", res.service, res.tag, res.duration, res.digest)
     }
     
     summary += "================================================================================"
-    
     echo summary
 }
