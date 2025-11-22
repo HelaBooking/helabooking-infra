@@ -3,7 +3,8 @@ def skipBuild = false
 def allServices = ["user-service", "event-service", "booking-service", "ticketing-service", "notification-service", "audit-service"]
 def servicesToBuild = []
 def imageTag = ""
-
+// List to store build metadata for the summary
+def buildResults = []
 
 pipeline {
     agent any
@@ -16,10 +17,8 @@ pipeline {
         // Git ENVs
         GIT_AUTH = credentials('git-org-credentials')
         BACKEND_REPO = "github.com/HelaBooking/helabooking-backend.git"
-        // SERVICES = Refer Line 59
         // Image Building Container
         BUILDKIT_CONTAINER = "buildkit"
-        // The Jenkins Plugin forces the mount at /home/jenkins/agent
         AGENT_HOME = "/home/jenkins/agent"
         WORKSPACE_DIR = "${AGENT_HOME}/workspace/image-build"
     }
@@ -29,18 +28,18 @@ pipeline {
             steps {
                 ansiColor('xterm') {
                     sh """
-                        echo "> 📁 Preparing backend repo folder..."
+                        echo "\033[1;34m> 📁 Preparing backend repo folder...\033[0m"
                         if [ ! -d "${WORKSPACE_DIR}" ]; then
                             mkdir -p ${WORKSPACE_DIR}
                         fi
                         cd ${WORKSPACE_DIR}
 
                         if [ ! -d "backend" ]; then
-                            echo "> ⬇️ Cloning backend repo..."
+                            echo "\033[1;34m> ⬇️ Cloning backend repo...\033[0m"
                             git clone https://${GIT_AUTH_USR}:${GIT_AUTH_PSW}@${BACKEND_REPO} backend
                             cd backend
                         else
-                            echo "> 🔄 Backend folder exists → pulling latest..."
+                            echo "\033[1;34m> 🔄 Backend folder exists → pulling latest...\033[0m"
                             cd backend
                             git reset --hard
                             git fetch --all
@@ -70,6 +69,7 @@ pipeline {
                     servicesToBuild = []
                     skipBuild = false
                     imageTag = ""
+                    buildResults = []
 
                     def commonChanged = changes.any { it.startsWith("common/") }
                     def rootPomChanged = changes.contains("pom.xml")
@@ -83,10 +83,10 @@ pipeline {
                     }
 
                     if (servicesToBuild.isEmpty()) {
-                        echo "No service changes → skipping build"
+                        echo "\033[1;33mNo service changes → skipping build\033[0m"
                         skipBuild = true
                     } else {
-                        echo "Services to build → ${servicesToBuild}"
+                        echo "\033[1;32mServices to build → ${servicesToBuild}\033[0m"
                     }
 
                     // Tag based on branch
@@ -105,48 +105,113 @@ pipeline {
             }
         }
 
-        stage('Build & Push Images to Harbor') {
+        stage('Build & Push Images') {
             when { expression { return !skipBuild } }
             steps {
-                script {
-                    withCredentials([
-                        usernamePassword(
-                            credentialsId: 'harbor-credentials',
-                            usernameVariable: 'HARBOR_USER',
-                            passwordVariable: 'HARBOR_PASS'
-                        )
-                    ]) {
-                        // 1. Write Auth to the SHARED HOME directory
-                        sh """
-                            if [ ! -d "${AGENT_HOME}/.docker" ]; then
-                                echo "> 🗝 Writing Docker auth config for BuildKit..."
-                                mkdir -p ${AGENT_HOME}/.docker
-                                echo '{"auths":{"${REGISTRY}":{"username":"${HARBOR_USER}","password":"${HARBOR_PASS}"}}}' > ${AGENT_HOME}/.docker/config.json
-                            fi
-                        """
-                        // Build and push images
-                        servicesToBuild.each { svc ->
-                            echo "> 🔨 Building image for ${svc}..."
+                ansiColor('xterm') {
+                    script {
+                        withCredentials([
+                            usernamePassword(
+                                credentialsId: 'harbor-credentials',
+                                usernameVariable: 'HARBOR_USER',
+                                passwordVariable: 'HARBOR_PASS'
+                            )
+                        ]) {
+                            // 1. Write Auth
+                            sh """
+                                if [ ! -d "${AGENT_HOME}/.docker" ]; then
+                                    echo "> 🗝 Writing Docker auth config..."
+                                    mkdir -p ${AGENT_HOME}/.docker
+                                    echo '{"auths":{"${REGISTRY}":{"username":"${HARBOR_USER}","password":"${HARBOR_PASS}"}}}' > ${AGENT_HOME}/.docker/config.json
+                                fi
+                            """
+                            
+                            // 2. Iterate and Build
+                            servicesToBuild.each { svc ->
+                                def startTime = System.currentTimeMillis()
+                                
+                                // Visual Separator for Logs
+                                printHeader(svc, imageTag)
 
-                            container("${BUILDKIT_CONTAINER}") {
-                                // Explicitly set DOCKER_CONFIG so BuildKit finds the file
-                                withEnv(["DOCKER_CONFIG=${AGENT_HOME}/.docker"]) {
-                                    sh """
-                                        buildctl build \
-                                            --frontend=dockerfile.v0 \
-                                            --local context=${WORKSPACE_DIR}/backend \
-                                            --local dockerfile=${WORKSPACE_DIR}/backend/${svc} \
-                                            --output type=image,registry.insecure=true,name=${REGISTRY}/${svc}:${imageTag},push=true \
-                                            --import-cache type=registry,ref=${REGISTRY}/${svc}:cache \
-                                            --export-cache type=registry,ref=${REGISTRY}/${svc}:cache,mode=max
-                                    """
+                                container("${BUILDKIT_CONTAINER}") {
+                                    withEnv(["DOCKER_CONFIG=${AGENT_HOME}/.docker"]) {
+                                        // Build and capture metadata using 'metadata-file'
+                                        sh """
+                                            buildctl build \
+                                                --frontend=dockerfile.v0 \
+                                                --local context=${WORKSPACE_DIR}/backend \
+                                                --local dockerfile=${WORKSPACE_DIR}/backend/${svc} \
+                                                --output type=image,registry.insecure=true,name=${REGISTRY}/${svc}:${imageTag},push=true \
+                                                --import-cache type=registry,ref=${REGISTRY}/${svc}:cache \
+                                                --export-cache type=registry,ref=${REGISTRY}/${svc}:cache,mode=max \
+                                                --metadata-file ${AGENT_HOME}/metadata-${svc}.json
+                                        """
+                                    }
                                 }
+                                
+                                // Calculate duration
+                                def duration = (System.currentTimeMillis() - startTime) / 1000
+                                
+                                // Read image size (approximation via buildctl doesn't give easy size, 
+                                // so we will log the digest and success)
+                                def metadata = readJSON file: "${AGENT_HOME}/metadata-${svc}.json"
+                                def digest = metadata['containerimage.digest']
+                                
+                                // Store result
+                                buildResults.add([
+                                    service: svc,
+                                    tag: imageTag,
+                                    duration: "${duration}s",
+                                    digest: digest
+                                ])
+
+                                echo "\033[1;32m> ✅ Successfully pushed ${svc}:${imageTag}\033[0m"
                             }
-                            echo "> 📤 Pushed ${svc}:${imageTag} to ${REGISTRY}"
                         }
                     }
                 }
             }
         }
     }
+    
+    post {
+        always {
+            script {
+                if (!skipBuild && !buildResults.isEmpty()) {
+                    printSummary(buildResults, REGISTRY)
+                }
+            }
+        }
+    }
+}
+
+// --- Helper Functions ---
+
+def printHeader(serviceName, tag) {
+    echo """
+\033[1;36m================================================================================
+  🔨 BUILDING SERVICE: ${serviceName}
+  🏷️  TAG: ${tag}
+================================================================================\033[0m
+"""
+}
+
+def printSummary(results, registryUrl) {
+    def summary = """
+\033[1;35m
+================================================================================
+                        🚀 BUILD & PUSH SUMMARY
+================================================================================
+\033[0m"""
+    
+    summary += String.format("| %-20s | %-15s | %-10s | %-20s |\n", "Service", "Tag", "Duration", "Status")
+    summary += "|----------------------|-----------------|------------|----------------------|\n"
+
+    results.each { res ->
+        summary += String.format("| %-20s | %-15s | %-10s | \033[1;32m%-20s\033[0m |\n", res.service, res.tag, res.duration, "PUSHED")
+    }
+    
+    summary += "================================================================================"
+    
+    echo summary
 }
