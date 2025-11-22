@@ -134,7 +134,7 @@ pipeline {
                                     sh """
                                         buildctl build \
                                             --frontend=dockerfile.v0 \
-                                            --local context=${WORKSPACE_DIR}/backend/${svc} \
+                                            --local context=${WORKSPACE_DIR}/backend \
                                             --local dockerfile=${WORKSPACE_DIR}/backend/${svc} \
                                             --output type=image,registry.insecure=true,name=${REGISTRY}/${svc}:${imageTag},push=true \
                                             --import-cache type=registry,ref=${REGISTRY}/${svc}:cache \
