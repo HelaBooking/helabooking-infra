@@ -19,20 +19,21 @@ pipeline {
         // SERVICES = Refer Line 59
         // Image Building Container
         BUILDKIT_CONTAINER = "buildkit"
+        // The Jenkins Plugin forces the mount at /home/jenkins/agent
+        AGENT_HOME = "/home/jenkins/agent"
+        WORKSPACE_DIR = "${AGENT_HOME}/workspace/image-build"
     }
 
     stages {
-
         stage('Clone Backend Services Repo') {
             steps {
                 ansiColor('xterm') {
-                    sh '''
+                    sh """
                         echo "> 📁 Preparing backend repo folder..."
-
-                        if [ ! -d "/home/jenkins/agent/workspace/image-build" ]; then
-                            mkdir -p /home/jenkins/agent/workspace/image-build
+                        if [ ! -d "${WORKSPACE_DIR}" ]; then
+                            mkdir -p ${WORKSPACE_DIR}
                         fi
-                        cd /home/jenkins/agent/workspace/image-build
+                        cd ${WORKSPACE_DIR}
 
                         if [ ! -d "backend" ]; then
                             echo "> ⬇️ Cloning backend repo..."
@@ -47,7 +48,7 @@ pipeline {
 
                         git checkout ${BRANCH_NAME}
                         git pull origin ${BRANCH_NAME}
-                    '''
+                    """
                 }
             }
         }
@@ -55,16 +56,17 @@ pipeline {
         stage('Preparing Build') {
             steps {
                 script {
-                    sh "cd /home/jenkins/agent/workspace/image-build/backend && git fetch --prune"
+                    sh "cd ${WORKSPACE_DIR}/backend && git fetch --prune"
 
                     // Detect changed files
                     def changes = sh(
-                        script: "cd /home/jenkins/agent/workspace/image-build/backend && git diff --name-only HEAD~1 HEAD",
+                        script: "cd ${WORKSPACE_DIR}/backend && git diff --name-only HEAD~1 HEAD",
                         returnStdout: true
                     ).trim().split("\n")
 
                     echo "Changed files: ${changes}"
 
+                    // Reset globals
                     servicesToBuild = []
                     skipBuild = false
                     imageTag = ""
@@ -89,7 +91,7 @@ pipeline {
 
                     // Tag based on branch
                     def shortCommit = sh(
-                        script: "cd /home/jenkins/agent/workspace/image-build/backend && git rev-parse --short HEAD",
+                        script: "cd ${WORKSPACE_DIR}/backend && git rev-parse --short HEAD",
                         returnStdout: true
                     ).trim()
 
@@ -114,32 +116,32 @@ pipeline {
                             passwordVariable: 'HARBOR_PASS'
                         )
                     ]) {
-                        // Create auth file for buildkit push
-                        sh '''
-                            if [ ! -d "/workspace/.docker" ]; then
+                        // 1. Write Auth to the SHARED HOME directory
+                        sh """
+                            if [ ! -d "${AGENT_HOME}/.docker" ]; then
                                 echo "> 🗝 Writing Docker auth config for BuildKit..."
-                                mkdir -p /workspace/.docker
-                                echo '{"auths":{"${REGISTRY}":{"username":"${HARBOR_USER}","password":"${HARBOR_PASS}"}}}' > /workspace/.docker/config.json
+                                mkdir -p ${AGENT_HOME}/.docker
+                                echo '{"auths":{"${REGISTRY}":{"username":"${HARBOR_USER}","password":"${HARBOR_PASS}"}}}' > ${AGENT_HOME}/.docker/config.json
                             fi
-                        '''
+                        """
                         // Build and push images
                         servicesToBuild.each { svc ->
-
                             echo "> 🔨 Building image for ${svc}..."
 
                             container("${BUILDKIT_CONTAINER}") {
-                                sh """
-                                    buildctl build \
-                                        --frontend=dockerfile.v0 \
-                                        --local context=/workspace/image-build/backend/${svc} \
-                                        --local dockerfile=/workspace/image-build/backend/${svc} \
-                                        --output type=registry,registry.insecure=true,tlsservername=${REGISTRY_HOSTNAME},name=${REGISTRY}/${svc}:${imageTag},push=true
-
-                                        --import-cache type=registry,ref=${REGISTRY}/${svc}:cache \
-                                        --export-cache type=registry,ref=${REGISTRY}/${svc}:cache,mode=max
-                                """
+                                // Explicitly set DOCKER_CONFIG so BuildKit finds the file
+                                withEnv(["DOCKER_CONFIG=${AGENT_HOME}/.docker"]) {
+                                    sh """
+                                        buildctl build \
+                                            --frontend=dockerfile.v0 \
+                                            --local context=${WORKSPACE_DIR}/backend/${svc} \
+                                            --local dockerfile=${WORKSPACE_DIR}/backend/${svc} \
+                                            --output type=registry,registry.insecure=true,tlsservername=${REGISTRY_HOSTNAME},name=${REGISTRY}/${svc}:${imageTag},push=true \
+                                            --import-cache type=registry,ref=${REGISTRY}/${svc}:cache \
+                                            --export-cache type=registry,ref=${REGISTRY}/${svc}:cache,mode=max
+                                    """
+                                }
                             }
-
                             echo "> 📤 Pushed ${svc}:${imageTag} to ${REGISTRY}"
                         }
                     }
