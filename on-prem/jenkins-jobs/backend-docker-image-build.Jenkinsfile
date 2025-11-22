@@ -1,3 +1,10 @@
+// Global variables
+def skipBuild = false
+def allServices = ["user-service", "event-service", "booking-service", "ticketing-service", "notification-service", "audit-service"]
+def servicesToBuild = []
+def imageTag = ""
+
+
 pipeline {
     agent any
 
@@ -58,27 +65,26 @@ pipeline {
 
                     echo "Changed files: ${changes}"
 
-                    def ALL_SERVICES = ["user-service", "event-service", "booking-service", "ticketing-service", "notification-service", "audit-service"]
-                    def SERVICES_TO_BUILD = []
-                    def skipBuild = false
-                    def IMAGE_TAG = ""
+                    servicesToBuild = []
+                    skipBuild = false
+                    imageTag = ""
 
                     def commonChanged = changes.any { it.startsWith("common/") }
                     def rootPomChanged = changes.contains("pom.xml")
 
                     if (commonChanged || rootPomChanged) {
-                        SERVICES_TO_BUILD = ALL_SERVICES
+                        servicesToBuild = allServices
                     } else {
-                        SERVICES_TO_BUILD = ALL_SERVICES.findAll { svc ->
+                        servicesToBuild = allServices.findAll { svc ->
                             changes.any { it.startsWith("${svc}/") }
                         }
                     }
 
-                    if (SERVICES_TO_BUILD.isEmpty()) {
+                    if (servicesToBuild.isEmpty()) {
                         echo "No service changes → skipping build"
                         skipBuild = true
                     } else {
-                        echo "Services to build → ${SERVICES_TO_BUILD}"
+                        echo "Services to build → ${servicesToBuild}"
                     }
 
                     // Tag based on branch
@@ -88,10 +94,10 @@ pipeline {
                     ).trim()
 
                     switch(env.BRANCH_NAME) {
-                        case "dev":  IMAGE_TAG = "dev-${shortCommit}"; break
-                        case "qa":   IMAGE_TAG = "qa-${shortCommit}"; break
-                        case "stag": IMAGE_TAG = "stag-${shortCommit}"; break
-                        case "main": IMAGE_TAG = "prod-${shortCommit}"; break
+                        case "dev":  imageTag = "dev-${shortCommit}"; break
+                        case "qa":   imageTag = "qa-${shortCommit}"; break
+                        case "stag": imageTag = "stag-${shortCommit}"; break
+                        case "main": imageTag = "prod-${shortCommit}"; break
                     }
                 }
             }
@@ -127,14 +133,14 @@ pipeline {
                                         --frontend=dockerfile.v0 \
                                         --local context=/workspace/image-build/backend/${svc} \
                                         --local dockerfile=/workspace/image-build/backend/${svc} \
-                                        --output type=registry,registry.insecure=true,tlsservername=${REGISTRY_HOSTNAME},name=${REGISTRY}/${svc}:${IMAGE_TAG},push=true
+                                        --output type=registry,registry.insecure=true,tlsservername=${REGISTRY_HOSTNAME},name=${REGISTRY}/${svc}:${imageTag},push=true
 
                                         --import-cache type=registry,ref=${REGISTRY}/${svc}:cache \
                                         --export-cache type=registry,ref=${REGISTRY}/${svc}:cache,mode=max
                                 """
                             }
 
-                            echo "> 📤 Pushed ${svc}:${IMAGE_TAG} to ${REGISTRY}"
+                            echo "> 📤 Pushed ${svc}:${imageTag} to ${REGISTRY}"
                         }
                     }
                 }
