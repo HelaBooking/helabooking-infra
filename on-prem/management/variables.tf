@@ -67,7 +67,7 @@ variable "rancher_hostname" {
 variable "jenkins_version" {
   description = "Version of Jenkins Helm chart"
   type        = string
-  default     = "5.8.108"
+  default     = "5.8.110"
 }
 variable "harbor_version" {
   description = "Version of Harbor Helm chart"

@@ -195,7 +195,8 @@ module "jenkins_helm" {
       name = "controller.additionalPlugins",
       value_list = [
         "github-branch-source:1917.v9ee8a_39b_3d0d",
-        "ansicolor:1.0.6"
+        "ansicolor:1.0.6",
+        "generic-webhook-trigger:2.4.1"
       ]
     },
     # Config as Code (JCasC) scripts
