@@ -136,7 +136,7 @@ pipeline {
                                             --frontend=dockerfile.v0 \
                                             --local context=${WORKSPACE_DIR}/backend/${svc} \
                                             --local dockerfile=${WORKSPACE_DIR}/backend/${svc} \
-                                            --output type=registry,registry.insecure=true,tlsservername=${REGISTRY_HOSTNAME},name=${REGISTRY}/${svc}:${imageTag},push=true \
+                                            --output type=image,registry.insecure=true,name=${REGISTRY}/${svc}:${imageTag},push=true \
                                             --import-cache type=registry,ref=${REGISTRY}/${svc}:cache \
                                             --export-cache type=registry,ref=${REGISTRY}/${svc}:cache,mode=max
                                     """
