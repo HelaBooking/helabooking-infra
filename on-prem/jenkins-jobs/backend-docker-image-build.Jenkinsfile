@@ -123,7 +123,7 @@ pipeline {
                             fi
                         '''
                         // Build and push images
-                        SERVICES_TO_BUILD.each { svc ->
+                        servicesToBuild.each { svc ->
 
                             echo "> 🔨 Building image for ${svc}..."
 
