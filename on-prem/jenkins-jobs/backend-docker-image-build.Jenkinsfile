@@ -155,7 +155,7 @@ pipeline {
                                         ) == 0
 
                                         if (exists) {
-                                            echo "\033[1;33m> ⏭️  Skipping ${svc} (Image ${imageTag} found via API)\033[0m"
+                                            echo "\033[1;33m> ⏭️  Skipping ${svc} (Image ${imageTag} found in registry via API)\033[0m"
                                     // Add to results as "SKIPPED" for the final report
                                             buildResults.add([
                                                 service: svc,

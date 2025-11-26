@@ -42,9 +42,8 @@ pipeline {
         
         // Git ENVs
         GIT_AUTH = credentials('git-org-credentials')
-        // Update this URL to your actual Frontend Repo
         FRONTEND_REPO = "github.com/HelaBooking/helabooking-frontend.git" 
-        
+        // BuildKit Container Name
         BUILDKIT_CONTAINER = "buildkit"
         
         // Paths
@@ -81,49 +80,99 @@ pipeline {
             }
         }
 
-        stage('Preparing Build') {
+        stage('Preparing & Checking Registry') {
             steps {
                 script {
-                    sh "cd ${WORKSPACE_DIR}/frontend && git fetch --prune"
+                    ansiColor('xterm') {
+                        sh "cd ${WORKSPACE_DIR}/frontend && git fetch --prune"
 
-                    // Detect changed files
-                    def changes = sh(
-                        script: "cd ${WORKSPACE_DIR}/frontend && git diff --name-only HEAD~1 HEAD",
-                        returnStdout: true
-                    ).trim().split("\n")
+                        // Detect changed files
+                        def changes = sh(
+                            script: "cd ${WORKSPACE_DIR}/frontend && git diff --name-only HEAD~1 HEAD",
+                            returnStdout: true
+                        ).trim().split("\n")
 
-                    echo "Changed files: ${changes}"
+                        echo "Changed files: ${changes}"
 
-                    // Reset globals
-                    servicesToBuild = []
-                    skipBuild = false
-                    imageTag = ""
-                    buildResults = []
+                        // Reset globals
+                        servicesToBuild = []
+                        skipBuild = false
+                        imageTag = ""
+                        buildResults = []
+                        def initialList = []
 
-                    // Logic: If ANY file changed in the frontend repo, rebuild the app.
-                    // You can add exclusions here (e.g. if only README.md changed)
-                    if (changes.length > 0) {
-                        servicesToBuild.add(appName)
-                    }
+                        // Logic: If ANY file changed, we consider the app for building
+                        if (changes.length > 0) {
+                            initialList.add(appName)
+                        }
 
-                    if (servicesToBuild.isEmpty()) {
-                        echo "\033[1;33mNo changes detected → skipping build\033[0m"
-                        skipBuild = true
-                    } else {
-                        echo "\033[1;32mBuilding Frontend → ${servicesToBuild}\033[0m"
-                    }
+                        // Tag based on branch
+                        def shortCommit = sh(
+                            script: "cd ${WORKSPACE_DIR}/frontend && git rev-parse --short HEAD",
+                            returnStdout: true
+                        ).trim()
 
-                    // Tag based on branch
-                    def shortCommit = sh(
-                        script: "cd ${WORKSPACE_DIR}/frontend && git rev-parse --short HEAD",
-                        returnStdout: true
-                    ).trim()
+                        switch(env.BRANCH_NAME) {
+                            case "dev":  imageTag = "dev-${shortCommit}"; break
+                            case "qa":   imageTag = "qa-${shortCommit}"; break
+                            case "stag": imageTag = "stag-${shortCommit}"; break
+                            case "main": imageTag = "prod-${shortCommit}"; break
+                        }
 
-                    switch(env.BRANCH_NAME) {
-                        case "dev":  imageTag = "dev-${shortCommit}"; break
-                        case "qa":   imageTag = "qa-${shortCommit}"; break
-                        case "stag": imageTag = "stag-${shortCommit}"; break
-                        case "main": imageTag = "prod-${shortCommit}"; break
+                        if (initialList.isEmpty()) {
+                            echo "\033[1;33mNo changes detected.\033[0m"
+                            skipBuild = true
+                        } else {
+                            echo "\033[1;34m> 🔍 Checking Registry for existing images for tag: ${imageTag}...\033[0m"
+                            
+                            // Check Registry for Existing Images (Idempotency Check)
+                            withCredentials([
+                                usernamePassword(
+                                    credentialsId: 'harbor-credentials',
+                                    usernameVariable: 'HARBOR_USER',
+                                    passwordVariable: 'HARBOR_PASS'
+                                )
+                            ]) {
+                                sh '''
+                                    mkdir -p $AGENT_HOME/.docker
+                                    echo "{\\"auths\\":{\\"$REGISTRY\\":{\\"username\\":\\"$HARBOR_USER\\",\\"password\\":\\"$HARBOR_PASS\\"}}}" > $AGENT_HOME/.docker/config.json
+                                '''
+
+                                initialList.each { svc ->
+                                    // Construct API URL for "helabooking/frontend"
+                                    def apiUrl = "https://${REGISTRY_HOSTNAME}/v2/helabooking/${svc}/manifests/${imageTag}"
+
+                                    withEnv(["CHECK_URL=${apiUrl}"]) {
+                                        def exists = sh(
+                                            script: 'curl -k -I -f -u "$HARBOR_USER:$HARBOR_PASS" "$CHECK_URL" > /dev/null 2>&1',
+                                            returnStatus: true
+                                        ) == 0
+
+                                        if (exists) {
+                                            echo "\033[1;33m> ⏭️  Skipping ${svc} (Image ${imageTag} found in registry via API)\033[0m"
+                                            buildResults.add([
+                                                service: svc,
+                                                tag: imageTag,
+                                                duration: "0s",
+                                                digest: "SKIPPED (Exists)"
+                                            ])
+                                        } else {
+                                            echo "\033[1;32m> ➕ Adding ${svc} to build list (Not found in registry)\033[0m"
+                                            servicesToBuild.add(svc)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Final Decision
+                        if (servicesToBuild.isEmpty()) {
+                            echo "\033[1;33mImage already exists in registry. Nothing to build.\033[0m"
+                            skipBuild = true
+                        } else {
+                            echo "\033[1;36mBuilding: ${servicesToBuild}\033[0m"
+                            skipBuild = false
+                        }
                     }
                 }
             }
@@ -134,66 +183,50 @@ pipeline {
             steps {
                 ansiColor('xterm') {
                     script {
-                        withCredentials([
-                            usernamePassword(
-                                credentialsId: 'harbor-credentials',
-                                usernameVariable: 'HARBOR_USER',
-                                passwordVariable: 'HARBOR_PASS'
-                            )
-                        ]) {
-                            // 1. Write Auth
-                            sh """
-                                if [ ! -d "${AGENT_HOME}/.docker" ]; then
-                                    echo "> 🗝 Writing Docker auth config..."
-                                    mkdir -p ${AGENT_HOME}/.docker
-                                    echo '{"auths":{"${REGISTRY}":{"username":"${HARBOR_USER}","password":"${HARBOR_PASS}"}}}' > ${AGENT_HOME}/.docker/config.json
-                                fi
-                            """
+                        // Auth file created in previous stage
+                        
+                        servicesToBuild.each { svc ->
+                            def startTime = System.currentTimeMillis()
+                            def metadataFileName = "metadata-${svc}.json"
                             
-                            // 2. Build
-                            servicesToBuild.each { svc ->
-                                def startTime = System.currentTimeMillis()
-                                def metadataFileName = "metadata-${svc}.json"
-                                
-                                printHeader(svc, imageTag)
+                            printHeader(svc, imageTag)
 
-                                container("${BUILDKIT_CONTAINER}") {
-                                    withEnv(["DOCKER_CONFIG=${AGENT_HOME}/.docker"]) {
-                                        // Note: Context is now the ROOT of the frontend folder
-                                        sh """
-                                            buildctl build \
-                                                --frontend=dockerfile.v0 \
-                                                --local context=${WORKSPACE_DIR}/frontend \
-                                                --local dockerfile=${WORKSPACE_DIR}/frontend \
-                                                --output type=image,registry.insecure=true,name=${REGISTRY}/${svc}:${imageTag},push=true \
-                                                --import-cache type=registry,ref=${REGISTRY}/${svc}:cache \
-                                                --export-cache type=registry,ref=${REGISTRY}/${svc}:cache,mode=max \
-                                                --metadata-file ${metadataFileName}
-                                        """
-                                    }
+                            container("${BUILDKIT_CONTAINER}") {
+                                withEnv(["DOCKER_CONFIG=${AGENT_HOME}/.docker"]) {
+                                    // Note: Context is the ROOT of the frontend folder
+                                    sh """
+                                        buildctl build \
+                                            --frontend=dockerfile.v0 \
+                                            --local context=${WORKSPACE_DIR}/frontend \
+                                            --local dockerfile=${WORKSPACE_DIR}/frontend \
+                                            --output type=image,registry.insecure=true,name=${REGISTRY}/${svc}:${imageTag},push=true \
+                                            --import-cache type=registry,ref=${REGISTRY}/${svc}:cache \
+                                            --export-cache type=registry,ref=${REGISTRY}/${svc}:cache,mode=max \
+                                            --metadata-file ${metadataFileName}
+                                    """
                                 }
-                                
-                                def duration = (System.currentTimeMillis() - startTime) / 1000
-                                
-                                // Manual JSON Parsing (Digest extraction)
-                                def digest = "unknown"
-                                if (fileExists(metadataFileName)) {
-                                    def fileContent = readFile(file: metadataFileName)
-                                    def matcher = (fileContent =~ /"containerimage.digest":\s*"([^"]+)"/)
-                                    if (matcher.find()) {
-                                        digest = matcher[0][1].replace("sha256:", "").take(7)
-                                    }
-                                }
-                                
-                                buildResults.add([
-                                    service: svc,
-                                    tag: imageTag,
-                                    duration: "${duration}s",
-                                    digest: digest
-                                ])
-
-                                echo "\033[1;32m> ✅ Successfully pushed ${svc}:${imageTag}\033[0m"
                             }
+                            
+                            def duration = (System.currentTimeMillis() - startTime) / 1000
+                            
+                            // Manual JSON Parsing (Digest extraction)
+                            def digest = "unknown"
+                            if (fileExists(metadataFileName)) {
+                                def fileContent = readFile(file: metadataFileName)
+                                def matcher = (fileContent =~ /"containerimage.digest":\s*"([^"]+)"/)
+                                if (matcher.find()) {
+                                    digest = matcher[0][1].replace("sha256:", "").take(7)
+                                }
+                            }
+                            
+                            buildResults.add([
+                                service: svc,
+                                tag: imageTag,
+                                duration: "${duration}s",
+                                digest: digest
+                            ])
+
+                            echo "\033[1;32m> ✅ Successfully pushed ${svc}:${imageTag} (Digest: ${digest})\033[0m"
                         }
                     }
                 }
@@ -204,7 +237,7 @@ pipeline {
     post {
         always {
             script {
-                if (!skipBuild && !buildResults.isEmpty()) {
+                if (!buildResults.isEmpty()) {
                     printSummary(buildResults)
                 }
             }
@@ -228,11 +261,12 @@ def printSummary(results) {
     summary += "                        🚀 BUILD & PUSH SUMMARY\n"
     summary += "================================================================================\033[0m\n"
     
-    summary += String.format("| %-20s | %-15s | %-10s | %-10s |\n", "App", "Tag", "Time", "Digest")
-    summary += "|----------------------|-----------------|------------|------------|\n"
+    summary += String.format("| %-20s | %-15s | %-10s | %-20s |\n", "App", "Tag", "Time", "Digest/Status")
+    summary += "|----------------------|-----------------|------------|----------------------|\n"
 
     results.each { res ->
-        summary += String.format("| %-20s | %-15s | %-10s | %-10s |\n", res.service, res.tag, res.duration, res.digest)
+        def statusColor = res.digest.contains("SKIPPED") ? "\033[1;33m" : "\033[1;32m" 
+        summary += String.format("| %-20s | %-15s | %-10s | ${statusColor}%-20s\033[0m |\n", res.service, res.tag, res.duration, res.digest)
     }
     
     summary += "================================================================================"
