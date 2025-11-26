@@ -243,10 +243,12 @@ pipeline {
     
     post {
         always {
-            script {
-                // Always print summary if we have results (even if some were skipped)
-                if (!buildResults.isEmpty()) {
-                    printSummary(buildResults)
+            ansiColor('xterm') {
+                script {
+                    // Always print summary if we have results (even if some were skipped)
+                    if (!buildResults.isEmpty()) {
+                        printSummary(buildResults)
+                    }
                 }
             }
         }

@@ -236,9 +236,11 @@ pipeline {
     
     post {
         always {
-            script {
-                if (!buildResults.isEmpty()) {
-                    printSummary(buildResults)
+            ansiColor('xterm') {
+                script {
+                    if (!buildResults.isEmpty()) {
+                        printSummary(buildResults)
+                    }
                 }
             }
         }
