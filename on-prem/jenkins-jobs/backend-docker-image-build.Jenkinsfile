@@ -14,19 +14,20 @@ if (allowedBranchesTriggers.contains(env.BRANCH_NAME)) {
     properties([
         pipelineTriggers([
             [$class: 'GenericTrigger',
-             // Extract variables from the GitHub JSON Payload
-             genericVariables: [
+            // Extract variables from the GitHub JSON Payload
+            genericVariables: [
                 [key: 'REPO_NAME', value: '$.repository.name'],
                 [key: 'REF', value: '$.ref']
-             ],
-             printContributedVariables: true,
-             printPostContent: false,
-             
-             // The Filter:
-             // This constructs a string like "helabooking-backend refs/heads/dev" and checks if it matches the Regex.
-             // It ensures this pipeline ONLY runs if the webhook comes from the backend repo and the branch matches the current pipeline branch.
-             regexpFilterText: '$REPO_NAME $REF',
-             regexpFilterExpression: "^${targetRepo} refs/heads/${env.BRANCH_NAME}\$" 
+            ],
+            token: 'backend-trigger',
+            printContributedVariables: true,
+            printPostContent: false,
+            
+            // The Filter:
+            // This constructs a string like "helabooking-backend refs/heads/dev" and checks if it matches the Regex.
+            // It ensures this pipeline ONLY runs if the webhook comes from the backend repo and the branch matches the current pipeline branch.
+            regexpFilterText: '$REPO_NAME $REF',
+            regexpFilterExpression: "^${targetRepo} refs/heads/${env.BRANCH_NAME}\$" 
             ]
         ])
     ])
