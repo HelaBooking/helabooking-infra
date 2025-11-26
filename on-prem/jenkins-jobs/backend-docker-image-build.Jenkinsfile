@@ -140,32 +140,33 @@ pipeline {
                                 )
                             ]) {
                                 // Generate BuildKit Config (needed for build stage)
-                                sh """
-                                    mkdir -p ${AGENT_HOME}/.docker
-                                    echo '{"auths":{"${REGISTRY}":{"username":"${HARBOR_USER}","password":"${HARBOR_PASS}"}}}' > ${AGENT_HOME}/.docker/config.json
-                                """
-
+                                sh '''
+                                    mkdir -p $AGENT_HOME/.docker
+                                    echo "{\\"auths\\":{\\"$REGISTRY\\":{\\"username\\":\\"$HARBOR_USER\\",\\"password\\":\\"$HARBOR_PASS\\"}}}" > $AGENT_HOME/.docker/config.json
+                                '''
                                 // Check each service image via Harbor V2 API
                                 initialList.each { svc ->
                                     // Harbor V2 API URL: https://<host>/v2/<project>/<repo>/manifests/<tag>
                                     def apiUrl = "https://${REGISTRY_HOSTNAME}/v2/helabooking/${svc}/manifests/${imageTag}"
-                                    def exists = sh(
-                                        script: "curl -k -I -f -u ${HARBOR_USER}:${HARBOR_PASS} ${apiUrl} > /dev/null 2>&1",
-                                        returnStatus: true
-                                    ) == 0
+                                    withEnv(["CHECK_URL=${apiUrl}"]) {
+                                        def exists = sh(
+                                            script: 'curl -k -I -f -u "$HARBOR_USER:$HARBOR_PASS" "$CHECK_URL" > /dev/null 2>&1',
+                                            returnStatus: true
+                                        ) == 0
 
-                                    if (exists) {
-                                        echo "\033[1;33m> ⏭️  Skipping ${svc} (Image ${imageTag} found via API)\033[0m"
+                                        if (exists) {
+                                            echo "\033[1;33m> ⏭️  Skipping ${svc} (Image ${imageTag} found via API)\033[0m"
                                     // Add to results as "SKIPPED" for the final report
-                                        buildResults.add([
-                                            service: svc,
-                                            tag: imageTag,
-                                            duration: "0s",
-                                            digest: "SKIPPED (Exists)"
-                                        ])
-                                    } else {
-                                        echo "\033[1;32m> ➕ Adding ${svc} to build list (Not found in registry)\033[0m"
-                                        servicesToBuild.add(svc)
+                                            buildResults.add([
+                                                service: svc,
+                                                tag: imageTag,
+                                                duration: "0s",
+                                                digest: "SKIPPED (Exists)"
+                                            ])
+                                        } else {
+                                            echo "\033[1;32m> ➕ Adding ${svc} to build list (Not found in registry)\033[0m"
+                                            servicesToBuild.add(svc)
+                                        }
                                     }
                                 }
                             }
