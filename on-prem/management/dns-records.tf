@@ -97,7 +97,7 @@ module "argocd_dns" {
 
   # NGINX Proxy Manager variables
   nginx_proxy_manager_forward_protocol = "https"
-  nginx_proxy_manager_forward_service  = "traefik.${var.namespace}.${var.cluster_service_domain}"
+  nginx_proxy_manager_forward_service  = "argo-cd-argocd-server.${var.namespace}.${var.cluster_service_domain}"
   nginx_proxy_manager_forward_port     = 443
 
   depends_on_resource = [module.harbor_dns] # To prevent 500 error when letsencrypt tries to create mutiple certificates

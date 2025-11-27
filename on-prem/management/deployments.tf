@@ -256,8 +256,7 @@ module "argocd_helm" {
   chart_version    = var.argocd_version
   set_values = [
     { name = "global.domain", value = "argocd.${var.cf_default_root_domain}" },
-    { name = "server.service.type", value = "ClusterIP" },
-    { name = "server.ingress.enabled", value = "true" },
+    { name = "server.ingress.enabled", value = "false" },
     { name = "configs.secret.argocdServerAdminPassword", value = var.argocd_admin_password_hash },
     { name = "server.resources.requests.cpu", value = "200m" },
     { name = "server.resources.requests.memory", value = "256Mi" }
