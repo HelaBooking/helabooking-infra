@@ -32,11 +32,6 @@ variable "rabbitmq_helm_version" {
   type        = string
   default     = "16.0.14"
 }
-variable "redis_helm_version" {
-  description = "Version of Redis Helm chart"
-  type        = string
-  default     = "23.2.12"
-}
 
 # Specific configurations
 

@@ -3,7 +3,6 @@
 
 ################################ App Service Related PVCs ################################
 # - RabbitMQ
-# - Redis
 
 # PVC for RabbitMQ Server
 module "rabbitmq_data_pvc" {
@@ -14,17 +13,6 @@ module "rabbitmq_data_pvc" {
   app_selector        = "rabbitmq"
   access_modes        = ["ReadWriteMany"]
   storage_request     = "1Gi"
-  depends_on_resource = [kubernetes_namespace.env_dev]
-}
-# PVC for Redis Server
-module "redis_data_pvc" {
-  source = "../cluster-templates/pv-claim"
-
-  pvc_name            = "redis-data-pvc"
-  namespace           = var.namespace
-  app_selector        = "redis"
-  access_modes        = ["ReadWriteMany"]
-  storage_request     = "512Mi"
   depends_on_resource = [kubernetes_namespace.env_dev]
 }
 
