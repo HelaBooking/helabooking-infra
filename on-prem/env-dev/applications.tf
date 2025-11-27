@@ -6,7 +6,7 @@ module "argocd_helabooking_dev_app" {
   source = "../cluster-templates/application"
 
   argocd_application_name      = "helabooking-dev"
-  argocd_repo_branch           = "dev"
+  argocd_repo_branch           = "main"
   argocd_application_path      = "overlays/env-dev"
   argocd_application_namespace = "env-dev"
 }
