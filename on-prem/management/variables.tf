@@ -74,6 +74,11 @@ variable "harbor_version" {
   type        = string
   default     = "1.18.0"
 }
+variable "argocd_version" {
+  description = "Version of ArgoCD Helm chart"
+  type        = string
+  default     = "9.1.4"
+}
 
 # Specific configurations
 # Jenkins

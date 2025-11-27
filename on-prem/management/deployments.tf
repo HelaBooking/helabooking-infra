@@ -8,7 +8,7 @@
 # Deploying Project Common Resources:
 # + Jenkins + Trivy (Vulnerability Scanning)
 # + Harbor
-# - ArgoCD
+# + ArgoCD
 # - Fluent Bit
 # - Hashicorp Vault
 
@@ -243,4 +243,24 @@ module "harbor_helm" {
     { name = "resources.limits.memory", value = "1Gi" }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.cert_manager_helm, module.longhorn_helm, module.harbor_registry_pvc, module.harbor_database_pvc, module.harbor_jobservice_pvc, module.harbor_redis_pvc, module.harbor_trivy_pvc]
+}
+
+# Deploying ArgoCD
+module "argocd_helm" {
+  source = "../cluster-templates/helm-chart"
+
+  chart_name       = "argo-cd"
+  chart_repository = "https://argoproj.github.io/argo-helm"
+  chart            = "argo-cd"
+  namespace        = kubernetes_namespace.management.metadata[0].name
+  chart_version    = var.argocd_version
+  set_values = [
+    { name = "global.domain", value = "argocd.${var.cf_default_root_domain}" },
+    { name = "server.service.type", value = "ClusterIP" },
+    { name = "server.ingress.enabled", value = "true" },
+    { name = "configs.secret.argocdServerAdminPassword", value = var.argocd_admin_password_hash },
+    { name = "server.resources.requests.cpu", value = "200m" },
+    { name = "server.resources.requests.memory", value = "256Mi" }
+  ]
+  depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.cert_manager_helm]
 }
