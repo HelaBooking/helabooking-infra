@@ -10,8 +10,8 @@ resource "kubernetes_manifest" "argocd_root_apps" {
     spec = {
       project = var.argocd_application_project
       source = {
-        repoURL        = var.gitops_repo_url         # GitOps Repo URL 
-        targetRevision = var.gitops_branch           # Branch to track
+        repoURL        = var.argocd_repo_url         # GitOps Repo URL 
+        targetRevision = var.argocd_repo_branch      # Branch to track
         path           = var.argocd_application_path # Path within the repo
       }
       destination = {

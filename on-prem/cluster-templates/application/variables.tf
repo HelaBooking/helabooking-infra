@@ -11,12 +11,12 @@ variable "argocd_application_project" {
   type        = string
   default     = "default"
 }
-variable "gitops_repo_url" {
+variable "argocd_repo_url" {
   description = "HTTPS URL of the helabooking-gitops repo"
   type        = string
   default     = "https://github.com/HelaBooking/helabooking-manifests.git"
 }
-variable "gitops_branch" {
+variable "argocd_repo_branch" {
   description = "Branch to track (e.g., main or HEAD)"
   type        = string
 }
