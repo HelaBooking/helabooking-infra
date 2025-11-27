@@ -21,7 +21,7 @@ module "nginx_ingress_service" {
 ############################## Project Services ##############################
 # + Jenkins (Deployed through Jenkins Helm Chart)
 # + Harbor (Deployed through Harbor Helm Chart)
-# - ArgoCD
+# + ArgoCD (Deployed through ArgoCD Helm Chart)
 # - Fluent Bit
 # - Hashicorp Vault
 

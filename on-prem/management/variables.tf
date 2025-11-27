@@ -67,12 +67,17 @@ variable "rancher_hostname" {
 variable "jenkins_version" {
   description = "Version of Jenkins Helm chart"
   type        = string
-  default     = "5.8.108"
+  default     = "5.8.110"
 }
 variable "harbor_version" {
   description = "Version of Harbor Helm chart"
   type        = string
   default     = "1.18.0"
+}
+variable "argocd_version" {
+  description = "Version of ArgoCD Helm chart"
+  type        = string
+  default     = "9.1.4"
 }
 
 # Specific configurations

@@ -47,7 +47,7 @@ module "harbor_registry_pvc" {
   namespace           = kubernetes_namespace.management.metadata[0].name
   app_selector        = "harbor"
   access_modes        = ["ReadWriteMany"]
-  storage_request     = "10Gi"
+  storage_request     = "20Gi"
   depends_on_resource = [kubernetes_namespace.management, module.longhorn_helm]
 }
 module "harbor_database_pvc" {
@@ -57,7 +57,7 @@ module "harbor_database_pvc" {
   namespace           = kubernetes_namespace.management.metadata[0].name
   app_selector        = "harbor"
   access_modes        = ["ReadWriteMany"]
-  storage_request     = "0.5Gi"
+  storage_request     = "1Gi"
   depends_on_resource = [kubernetes_namespace.management, module.longhorn_helm]
 }
 module "harbor_jobservice_pvc" {
@@ -77,7 +77,7 @@ module "harbor_redis_pvc" {
   namespace           = kubernetes_namespace.management.metadata[0].name
   app_selector        = "harbor"
   access_modes        = ["ReadWriteMany"]
-  storage_request     = "0.5Gi"
+  storage_request     = "1Gi"
   depends_on_resource = [kubernetes_namespace.management, module.longhorn_helm]
 }
 module "harbor_trivy_pvc" {
@@ -87,6 +87,6 @@ module "harbor_trivy_pvc" {
   namespace           = kubernetes_namespace.management.metadata[0].name
   app_selector        = "harbor"
   access_modes        = ["ReadWriteMany"]
-  storage_request     = "2Gi"
+  storage_request     = "5Gi"
   depends_on_resource = [kubernetes_namespace.management, module.longhorn_helm]
 }
