@@ -46,23 +46,4 @@ module "rabbitmq_helm" {
 
 
 ################################ Supporting Service Resources ################################
-
-# Secret for Harbor Repository Access within namespace
-resource "kubernetes_secret" "harbor_creds" {
-  metadata {
-    name      = "harbor-pull-secret"
-    namespace = var.namespace
-  }
-  type = "kubernetes.io/dockerconfigjson"
-  data = {
-    ".dockerconfigjson" = jsonencode({
-      auths = {
-        "harbor.management.ezbooking.lk" = {
-          username = var.harbor_username
-          password = var.harbor_password
-          auth     = base64encode("${var.harbor_username}:${var.harbor_password}")
-        }
-      }
-    })
-  }
-}
+# TBD
