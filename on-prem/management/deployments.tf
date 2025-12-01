@@ -188,6 +188,7 @@ module "jenkins_helm" {
     { name = "controller.resources.limits.cpu", value = "1500m" },
     { name = "controller.resources.limits.memory", value = "2Gi" },
     { name = "persistence.existingClaim", value = "jenkins-pvc" },
+    { name = "controller.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_controller_node_selector_hostname },
     { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
     # Agent configs - Defined in the custom_values variable
     # Plugins

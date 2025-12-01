@@ -87,6 +87,11 @@ variable "jenkins_agent_node_selector_hostname" {
   type        = string
   default     = "galaxy-node"
 }
+variable "jenkins_controller_node_selector_hostname" {
+  description = "Node selector hostname for Jenkins controller"
+  type        = string
+  default     = "pico-node"
+}
 variable "jenkins_agent_config" {
   description = "YAML configuration for Jenkins BuildKit container"
   type        = string
