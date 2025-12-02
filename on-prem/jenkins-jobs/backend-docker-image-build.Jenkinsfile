@@ -254,7 +254,7 @@ pipeline {
                         echo "\033[1;34m> 🔄 Updating GitOps Manifests...\033[0m"
                         
                         // 1. Determine Overlay Path based on branch
-                        def overlayPath = "apps/overlays/env-${env.BRANCH_NAME}" // maps 'dev' to 'apps/overlays/env-dev'
+                        def overlayPath = "overlays/env-${env.BRANCH_NAME}" // maps 'dev' to 'apps/overlays/env-dev'
                         
                         // 2. Clone Manifest Repo into a clean subfolder
                         def manifestDir = "${WORKSPACE_DIR}/manifests"

@@ -43,6 +43,7 @@ pipeline {
         // Git ENVs
         GIT_AUTH = credentials('git-org-credentials')
         FRONTEND_REPO = "github.com/HelaBooking/helabooking-frontend.git" 
+        MANIFEST_REPO = "github.com/HelaBooking/helabooking-manifests.git"
         // BuildKit Container Name
         BUILDKIT_CONTAINER = "buildkit"
         
@@ -227,6 +228,72 @@ pipeline {
                             ])
 
                             echo "\033[1;32m> ✅ Successfully pushed ${svc}:${imageTag} (Digest: ${digest})\033[0m"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Update GitOps Manifests') {
+            when { 
+                expression { 
+                    // Only run if we actually built something and we are on dev/qa branches
+                    return !skipBuild && !servicesToBuild.isEmpty() && ["dev", "qa"].contains(env.BRANCH_NAME) 
+                } 
+            }
+            steps {
+                ansiColor('xterm') {
+                    script {
+                        echo "\033[1;34m> 🔄 Updating GitOps Manifests...\033[0m"
+                        
+                        // 1. Determine Overlay Path based on branch
+                        def overlayPath = "overlays/env-${env.BRANCH_NAME}" // maps 'dev' to 'apps/overlays/env-dev'
+                        
+                        // 2. Clone Manifest Repo into a clean subfolder
+                        def manifestDir = "${WORKSPACE_DIR}/manifests"
+                        sh "rm -rf ${manifestDir}" // Clean up previous runs
+                        
+                        dir(manifestDir) {
+                            sh "git clone https://${GIT_AUTH_USR}:${GIT_AUTH_PSW}@${MANIFEST_REPO} ."
+                            sh "git checkout main" 
+                            
+                            // Configure Git
+                            sh """
+                                git config user.email "devjenkins@helabooking.com"
+                                git config user.name "Jenkins Dev Bot"
+                            """
+                            
+                            // 3. Update Images using Kustomize
+                            dir(overlayPath) {
+                                // Ensure kustomize exists
+                                sh '''
+                                    if ! command -v kustomize &> /dev/null; then
+                                        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+                                        mv kustomize /usr/local/bin/ || export PATH=$PATH:$(pwd)
+                                    fi
+                                '''
+                                
+                                // Update the specific frontend image
+                                // Placeholder: helabooking/frontend
+                                // New Image: harbor.../helabooking/frontend:dev-12345
+                                def placeholder = "helabooking/${appName}"
+                                def newImage = "${REGISTRY}/${appName}:${imageTag}"
+                                
+                                echo "   - Updating ${appName} to ${imageTag}"
+                                sh "kustomize edit set image ${placeholder}=${newImage}"
+                            }
+                            
+                            // 4. Commit and Push
+                            sh """
+                                git add ${overlayPath}/kustomization.yaml
+                                if ! git diff-index --quiet HEAD; then
+                                    git commit -m "deploy(${env.BRANCH_NAME}): Update frontend image to ${imageTag}"
+                                    git push origin main
+                                    echo "\033[1;32m> ✅ Manifests updated and pushed.\033[0m"
+                                else
+                                    echo "\033[1;33m> ⚠️ No manifest changes detected.\033[0m"
+                                fi
+                            """
                         }
                     }
                 }
