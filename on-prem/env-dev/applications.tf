@@ -1,5 +1,5 @@
 # Deploying following ArgoCD Application:
-# - helabooking-dev
+# + helabooking-dev
 
 # Dev Application Set
 module "argocd_helabooking_dev_app" {
@@ -13,8 +13,8 @@ module "argocd_helabooking_dev_app" {
 
 
 ########################## Secrets for Applications ##########################
-# - Harbor Credentials
-# - App Secrets (PostgreSQL, RabbbitMQ, JWT)
+# + Harbor Credentials
+# + App Secrets (PostgreSQL, RabbbitMQ, JWT)
 
 # Harbor Credentials
 resource "kubernetes_secret" "harbor_creds" {

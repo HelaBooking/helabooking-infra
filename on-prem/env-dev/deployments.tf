@@ -4,6 +4,7 @@
 ## App Services
 # + RabbitMQ
 ## Supporting Services
+# + PGAdmin
 # - Istio (Per Namespace)
 # - Grafana & Prometheus (as Operators)
 # - OpenSearch & OpenSearch Dashboard
@@ -46,4 +47,40 @@ module "rabbitmq_helm" {
 
 
 ################################ Supporting Service Resources ################################
-# TBD
+
+# Deploying PGAdmin
+module "pgadmin_deployment" {
+  source = "../cluster-templates/deployment"
+
+  app_name       = "pgadmin"
+  namespace      = var.namespace
+  replicas       = 1
+  selector_label = "pgadmin"
+  app_image      = "dpage/pgadmin4:${var.pgadmin_image}"
+  container_ports = [
+    {
+      name  = "web"
+      value = 80
+    }
+  ]
+  cpu_request    = "150m"
+  memory_request = "256Mi"
+  env_variable = [
+    {
+      name  = "PGADMIN_DEFAULT_EMAIL"
+      value = var.pgadmin_email
+    },
+    {
+      name  = "PGADMIN_DEFAULT_PASSWORD"
+      value = var.pgadmin_password
+    }
+  ]
+  volume_configs = [
+    {
+      name       = "pgadmin-data"
+      mount_path = "/var/lib/pgadmin"
+      pvc_name   = "pgadmin-data-pvc"
+    }
+  ]
+  depends_on_resource = [kubernetes_namespace.env_dev, module.pgadmin_data_pvc]
+}

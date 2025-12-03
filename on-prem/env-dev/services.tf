@@ -9,8 +9,23 @@
 
 ################################ Supporting Service Related Services ################################
 # Deploying following services:
+# + PGAdmin Service
 # - Grafana Service
 # - Prometheus Service
 # - OpenSearch Service
 # - OpenSearch Dashboard Service
 # - Istio (Related Services)
+
+# Deploying PGAdmin Service
+module "pgadmin_service" {
+  source = "../cluster-templates/service"
+
+  service_name = "pgadmin-service"
+  namespace    = var.namespace
+  app_selector = "pgadmin"
+  service_ports = [
+    { name = "http", value = 80, target_value = 80, protocol = "TCP" }
+  ]
+  service_type        = "ClusterIP"
+  depends_on_resource = module.pgadmin_deployment
+}

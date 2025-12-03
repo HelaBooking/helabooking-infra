@@ -38,5 +38,10 @@ variable "rabbitmq_helm_version" {
 
 ################################ Supporting Service Related Variables ################################
 # Image/Helm Chart versions
+variable "pgadmin_image" {
+  description = "Version of PGAdmin image"
+  type        = string
+  default     = "latest"
+}
 
 # Specific configurations
