@@ -29,7 +29,7 @@ variable "cluster_service_domain" {
 variable "traefik_version" {
   description = "Version of Traefik Helm chart"
   type        = string
-  default     = "37.1.1"
+  default     = "37.4.0"
 }
 variable "cert_manager_version" {
   description = "Version of Cert-Manager Helm chart"

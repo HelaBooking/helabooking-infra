@@ -23,7 +23,7 @@ module "traefik_helm" {
   source = "../cluster-templates/helm-chart"
 
   chart_name       = "traefik"
-  chart_repository = "https://helm.traefik.io/traefik"
+  chart_repository = "https://traefik.github.io/charts"
   chart            = "traefik"
   namespace        = kubernetes_namespace.management.metadata[0].name
   chart_version    = var.traefik_version
@@ -33,6 +33,8 @@ module "traefik_helm" {
     { name = "ports.websecure.port", value = "443" },
     { name = "ports.web.port", value = "80" },
     { name = "service.type", value = "ClusterIP" },
+    { name = "providers.kubernetesIngress.publishedService.enabled", value = "true" },
+    { name = "providers.kubernetesIngress.publishedService.pathOverride", value = "management/traefik" },
     { name = "replicas", value = "1" },
     { name = "resources.requests.cpu", value = "100m" },
     { name = "resources.requests.memory", value = "50Mi" }
