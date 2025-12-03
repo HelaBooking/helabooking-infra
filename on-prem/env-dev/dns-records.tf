@@ -34,6 +34,8 @@ module "rabbitmq_dns" {
   nginx_proxy_manager_forward_protocol = "http"
   nginx_proxy_manager_forward_service  = "rabbitmq.${var.namespace}.${var.cluster_service_domain}"
   nginx_proxy_manager_forward_port     = 15672
+
+  depends_on_resource = [module.helabooking_frontend_dns] # To prevent 500 error when letsencrypt tries to create mutiple certificates
 }
 
 ################################ Supporting Service Related DNS Records ################################
@@ -60,4 +62,6 @@ module "pgadmin_dns" {
   nginx_proxy_manager_forward_protocol = "http"
   nginx_proxy_manager_forward_service  = "pgadmin-service.${var.namespace}.${var.cluster_service_domain}"
   nginx_proxy_manager_forward_port     = 80
+
+  depends_on_resource = [module.rabbitmq_dns] # To prevent 500 error when letsencrypt tries to create mutiple certificates
 }
