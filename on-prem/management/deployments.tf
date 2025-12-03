@@ -262,7 +262,12 @@ module "argocd_helm" {
     { name = "server.ingress.enabled", value = "false" },
     { name = "configs.secret.argocdServerAdminPassword", value = var.argocd_admin_password_hash },
     { name = "server.resources.requests.cpu", value = "200m" },
-    { name = "server.resources.requests.memory", value = "256Mi" }
+    { name = "server.resources.requests.memory", value = "256Mi" },
+    # Forces ArgoCD to mark Ingress as "Healthy" even without an IP address
+    {
+      name  = "configs.cm.resource\\.customizations\\.health\\.networking\\.k8s\\.io_Ingress"
+      value = "hs = {}\nhs.status = \"Healthy\"\nhs.message = \"Ingress is Healthy (IP check bypassed for ClusterIP)\"\nreturn hs"
+    }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.cert_manager_helm]
 }
