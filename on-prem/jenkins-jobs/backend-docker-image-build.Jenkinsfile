@@ -294,7 +294,7 @@ pipeline {
                             sh """
                                 git add ${overlayPath}/kustomization.yaml
                                 if ! git diff-index --quiet HEAD; then
-                                    git commit -m "deploy(${env.BRANCH_NAME}): Update images to ${imageTag}"
+                                    git commit -m "deploy(${env.BRANCH_NAME}): Update (${servicesToBuild.join(', ')}) images to ${imageTag}"
                                     git push origin main
                                     echo "\033[1;32m> ✅ Manifests updated and pushed.\033[0m"
                                 else
