@@ -169,6 +169,9 @@ variable "fluentbit_config_service" {
     Daemon       Off
     Log_Level    info
     Parsers_File parsers.conf
+    HTTP_Server  On
+    HTTP_Port    2020
+    Health_Check On
 EOT
 }
 variable "fluentbit_config_inputs" {
