@@ -1,16 +1,16 @@
 # Deploying following resources:
 ## Microservices
-# - TBD
+# + TBD
 ## App Services
 # + RabbitMQ
 ## Supporting Services
 # + PGAdmin
 # - Istio (Per Namespace)
 # - Grafana & Prometheus (as Operators)
-# - OpenSearch & OpenSearch Dashboard
+# + OpenSearch & OpenSearch Dashboard
 
 ################################ Microservice Resources ################################
-# TBD
+# Deployed using ArgoCD
 
 ################################ App Service Resources ################################
 
@@ -83,4 +83,52 @@ module "pgadmin_deployment" {
     }
   ]
   depends_on_resource = [kubernetes_namespace.env_dev, module.pgadmin_data_pvc]
+}
+
+# Deploying OpenSearch Cluster
+module "opensearch_helm" {
+  source           = "../cluster-templates/helm-chart"
+  chart_name       = "opensearch"
+  chart_repository = "https://opensearch-project.github.io/helm-charts/"
+  chart            = "opensearch"
+  namespace        = var.namespace
+  chart_version    = var.opensearch_helm_version
+  set_values = [
+    { name = "clusterName", value = "opensearch-dev-cluster" },
+    { name = "nodeGroup", value = "master" },
+    { name = "replicas", value = "1" },
+    { name = "minimumMasterNodes", value = "1" },
+    # Resource specifications
+    { name = "persistence.enabled", value = "true" },
+    { name = "persistence.size", value = "10Gi" },
+    { name = "persistence.storageClass", value = "longhorn" },
+    { name = "resources.requests.cpu", value = "500m" },
+    { name = "resources.requests.memory", value = "500Mi" },
+    { name = "resources.limits.cpu", value = "1000m" },
+    { name = "resources.limits.memory", value = "1Gi" },
+    # Extra Variables
+    { name = "DISABLE_INSTALL_DEMO_CONFIG", value = "true" },
+    # Opensearch.yaml configs:
+    { name = "config.\"opensearch\\.yml\"", value = var.opensearch_config_yaml }
+  ]
+  depends_on = [kubernetes_namespace.env_dev]
+}
+# Deploying OpenSearch Dashboard
+module "opensearch_dashboard_helm" {
+  source           = "../cluster-templates/helm-chart"
+  chart_name       = "opensearch-dashboards"
+  chart_repository = "https://opensearch-project.github.io/helm-charts/"
+  chart            = "opensearch-dashboards"
+  namespace        = var.namespace
+  chart_version    = var.opensearch_dashboard_helm_version
+  set_values = [
+    { name = "opensearchHosts", value = "https://opensearch-dev-cluster.${var.namespace}.svc.${var.cluster_service_domain}:9200" },
+    { name = "replicaCount", value = "1" },
+    # Resource specifications
+    { name = "resources.requests.cpu", value = "250m" },
+    { name = "resources.requests.memory", value = "256Mi" },
+    { name = "resources.limits.cpu", value = "500m" },
+    { name = "resources.limits.memory", value = "512Mi" }
+  ]
+  depends_on = [kubernetes_namespace.env_dev, module.opensearch_helm]
 }

@@ -43,5 +43,27 @@ variable "pgadmin_image" {
   type        = string
   default     = "latest"
 }
+variable "opensearch_helm_version" {
+  description = "Version of OpenSearch Helm chart"
+  type        = string
+  default     = "3.3.2"
+}
+variable "opensearch_dashboard_helm_version" {
+  description = "Version of OpenSearch Dashboard Helm chart"
+  type        = string
+  default     = "3.3.0"
+}
 
 # Specific configurations
+# OpenSearch
+variable "opensearch_config_yaml" {
+  description = "Custom OpenSearch configuration in YAML format"
+  type        = string
+  default     = <<EOT
+discovery.type: single-node
+network.host: 0.0.0.0
+plugins.security.ssl.http.enabled: true
+plugins.security.ssl.transport.enabled: true
+plugins.alerting.enabled: true
+EOT
+}
