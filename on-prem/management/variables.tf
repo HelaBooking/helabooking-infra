@@ -201,13 +201,11 @@ variable "fluentbit_config_filters" {
     Kube_Tag_Prefix     kube.var.log.containers.
     Merge_Log           On
     Keep_Log            Off
-
 # Route 'management' namespace to the management tag
 [FILTER]
     Name                rewrite_tag
     Match               kube.*
     Rule                $kubernetes['namespace_name'] ^(management)$ opensearch.management false
-
 # Route 'env-dev' namespace to the DEV tag
 [FILTER]
     Name                rewrite_tag
