@@ -189,7 +189,6 @@ variable "fluentbit_config_filters" {
   description = "Filters YAML configuration for Fluent Bit"
   type        = string
   default     = <<EOT
-# 1. Enrich logs with Kubernetes metadata (Pod Name, Namespace, etc.)
 [FILTER]
     Name                kubernetes
     Match               kube.*
@@ -200,13 +199,13 @@ variable "fluentbit_config_filters" {
     Merge_Log           On
     Keep_Log            Off
 
-# 2. Route 'management' namespace to the management tag
+# Route 'management' namespace to the management tag
 [FILTER]
     Name                rewrite_tag
     Match               kube.*
     Rule                $kubernetes['namespace_name'] ^(management)$ opensearch.management false
 
-# 2. Route 'env-dev' namespace to the DEV tag
+# Route 'env-dev' namespace to the DEV tag
 [FILTER]
     Name                rewrite_tag
     Match               kube.*
