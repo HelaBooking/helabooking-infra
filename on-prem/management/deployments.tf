@@ -36,7 +36,7 @@ module "traefik_helm" {
     { name = "providers.kubernetesIngress.publishedService.enabled", value = "true" },
     { name = "providers.kubernetesIngress.publishedService.pathOverride", value = "management/traefik" },
     { name = "replicas", value = "1" },
-    { name = "resources.requests.cpu", value = "100m" },
+    { name = "resources.requests.cpu", value = "50m" },
     { name = "resources.requests.memory", value = "50Mi" }
   ]
   depends_on_resource = kubernetes_namespace.management
@@ -56,7 +56,7 @@ module "cert_manager_helm" {
     { name = "replicaCount", value = "1" },
     { name = "resources.limits.cpu", value = "400m" },
     { name = "resources.limits.memory", value = "256Mi" },
-    { name = "resources.requests.cpu", value = "100m" },
+    { name = "resources.requests.cpu", value = "50m" },
     { name = "resources.requests.memory", value = "100Mi" }
   ]
   depends_on_resource = [kubernetes_namespace.cert_manager, module.traefik_helm]
@@ -96,7 +96,7 @@ module "longhorn_helm" {
     { name = "csi.resizerReplicaCount", value = "1" },
     { name = "csi.snapshotterReplicaCount", value = "1" },
     { name = "longhornUI.replicas", value = "1" },
-    { name = "resources.requests.cpu", value = "200m" },
+    { name = "resources.requests.cpu", value = "100m" },
     { name = "resources.requests.memory", value = "128Mi" },
 
     # prevent Helm from creating its own StorageClass
@@ -153,7 +153,7 @@ module "nginx_proxy_deployment" {
       value = 443
     }
   ]
-  cpu_request    = "150m"
+  cpu_request    = "100m"
   memory_request = "128Mi"
   volume_configs = [
     {
@@ -261,7 +261,7 @@ module "argocd_helm" {
     { name = "global.domain", value = "argocd.${var.cf_default_root_domain}" },
     { name = "server.ingress.enabled", value = "false" },
     { name = "configs.secret.argocdServerAdminPassword", value = var.argocd_admin_password_hash },
-    { name = "server.resources.requests.cpu", value = "200m" },
+    { name = "server.resources.requests.cpu", value = "100m" },
     { name = "server.resources.requests.memory", value = "256Mi" },
     # Forces ArgoCD to mark Ingress as "Healthy" even without an IP address
     {
@@ -283,7 +283,7 @@ module "fluentbit_helm" {
   chart_version    = var.fluentbit_version
 
   set_values = [
-    { name = "resources.requests.cpu", value = "100m" },
+    { name = "resources.requests.cpu", value = "50m" },
     { name = "resources.requests.memory", value = "64Mi" },
     { name = "resources.limits.cpu", value = "200m" },
     { name = "resources.limits.memory", value = "128Mi" },
