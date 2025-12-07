@@ -124,7 +124,7 @@ module "opensearch_dashboard_helm" {
   namespace        = var.namespace
   chart_version    = var.opensearch_dashboard_helm_version
   set_values = [
-    { name = "opensearchHosts", value = "https://opensearch-cluster-master.${var.namespace}.svc.${var.cluster_service_domain}:9200" },
+    { name = "opensearchHosts", value = "https://opensearch-cluster-master.${var.namespace}.${var.cluster_service_domain}:9200" },
     { name = "replicaCount", value = "1" },
     # Resource specifications
     { name = "resources.requests.cpu", value = "250m" },
