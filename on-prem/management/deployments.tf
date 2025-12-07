@@ -289,5 +289,5 @@ module "fluentbit_helm" {
     { name = "resources.limits.cpu", value = "200m" },
     { name = "resources.limits.memory", value = "128Mi" }
   ]
-  depends_on_resource = [kubernetes_namespace.logging, module.traefik_helm]
+  depends_on_resource = [kubernetes_namespace.management, module.traefik_helm]
 }
