@@ -107,7 +107,11 @@ module "opensearch_helm" {
     { name = "resources.limits.cpu", value = "1000m" },
     { name = "resources.limits.memory", value = "1Gi" },
     # Extra Variables
-    { name = "DISABLE_INSTALL_DEMO_CONFIG", value = "true" },
+    { name = "extraEnvs[0].name", value = "DISABLE_INSTALL_DEMO_CONFIG" },
+    { name = "extraEnvs[0].value", value = "true" },
+    { name = "extraEnvs[1].name", value = "OPENSEARCH_INITIAL_ADMIN_PASSWORD" },
+    { name = "extraEnvs[1].value", value = var.opensearch_admin_password },
+
     # Opensearch.yaml configs:
     { name = "config.\"opensearch\\.yml\"", value = var.opensearch_config_yaml }
   ]
