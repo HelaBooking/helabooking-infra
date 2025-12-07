@@ -1,12 +1,12 @@
 # Deploying following resources:
 ## Microservices
-# + TBD
+# + Deployed using ArgoCD
 ## App Services
 # + RabbitMQ
 ## Supporting Services
 # + PGAdmin
 # - Istio (Per Namespace)
-# - Grafana & Prometheus (as Operators)
+# + Grafana & Prometheus (as Operators)
 # + OpenSearch & OpenSearch Dashboard
 
 ################################ Microservice Resources ################################
@@ -133,4 +133,40 @@ module "opensearch_dashboard_helm" {
     { name = "resources.limits.memory", value = "512Mi" }
   ]
   depends_on = [kubernetes_namespace.env_dev, module.opensearch_helm]
+}
+
+# Deploying Prometheus & Grafana Operators using Helm
+module "kube_prometheus_stack_helm" {
+  source           = "../cluster-templates/helm-chart"
+  chart_name       = "kube-prometheus-stack"
+  chart_repository = "https://prometheus-community.github.io/helm-charts"
+  chart            = "kube-prometheus-stack"
+  namespace        = var.namespace
+  chart_version    = var.kube_prometheus_stack_helm_version
+  # custom values
+  custom_values = var.prometheus_grafana_values
+
+  set_values = [
+    { name = "grafana.adminPassword", value = var.grafana_admin_password },
+    { name = "grafana.service.type", value = "ClusterIP" },
+    # Resource specs
+    { name = "prometheus.prometheusSpec.resources.requests.cpu", value = "200m" },
+    { name = "prometheus.prometheusSpec.resources.requests.memory", value = "512Mi" },
+    { name = "prometheus.prometheusSpec.resources.limits.cpu", value = "1500m" },
+    { name = "prometheus.prometheusSpec.resources.limits.memory", value = "1Gi" },
+    { name = "prometheusOperator.resources.requests.cpu", value = "100m" },
+    { name = "prometheusOperator.resources.requests.memory", value = "256Mi" },
+    { name = "prometheusOperator.resources.limits.cpu", value = "1000m" },
+    { name = "prometheusOperator.resources.limits.memory", value = "1Gi" },
+    { name = "alertmanager.alertmanagerSpec.resources.requests.cpu", value = "100m" },
+    { name = "alertmanager.alertmanagerSpec.resources.requests.memory", value = "256Mi" },
+    { name = "alertmanager.alertmanagerSpec.resources.limits.cpu", value = "500m" },
+    { name = "alertmanager.alertmanagerSpec.resources.limits.memory", value = "512Mi" },
+    # Storage specs
+    { name = "prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage", value = "5Gi" },
+    { name = "prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName", value = "longhorn" },
+    { name = "alertmanager.alertmanagerSpec.storage.volumeClaimTemplate.spec.resources.requests.storage", value = "2Gi" },
+    { name = "alertmanager.alertmanagerSpec.storage.volumeClaimTemplate.spec.storageClassName", value = "longhorn" }
+  ]
+  depends_on = [kubernetes_namespace.env_dev]
 }

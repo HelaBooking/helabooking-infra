@@ -53,6 +53,11 @@ variable "opensearch_dashboard_helm_version" {
   type        = string
   default     = "3.3.0"
 }
+variable "kube_prometheus_stack_helm_version" {
+  description = "Version of Grafana Helm chart"
+  type        = string
+  default     = "79.12.0"
+}
 
 # Specific configurations
 # OpenSearch
@@ -65,5 +70,61 @@ network.host: 0.0.0.0
 plugins.security.ssl.http.enabled: true
 plugins.security.ssl.transport.enabled: true
 plugins.alerting.enabled: true
+EOT
+}
+# Grafana & Prometheus Operator
+variable "prometheus_grafana_values" {
+  description = "Custom values for Prometheus & Grafana Helm chart"
+  type        = string
+  default     = <<EOT
+# --- Global Settings ---
+fullnameOverride: "prometheus-dev"
+
+# --- Cluster Monitoring (Enabled for Dev Stack) ---
+nodeExporter:
+  enabled: true
+kubelet:
+  enabled: true
+kubeApiServer:
+  enabled: true
+kubeControllerManager:
+  enabled: true
+kubeScheduler:
+  enabled: true
+kubeStateMetrics:
+  enabled: true
+coreDns:
+  enabled: true
+
+# --- Grafana Configuration ---
+grafana:
+  enabled: true
+  defaultDashboardsEnabled: true
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+
+# --- Prometheus Configuration ---
+prometheus:
+  prometheusSpec:
+    # Only scrape in namespaces labeled "monitoring: dev-stack"
+    serviceMonitorNamespaceSelector:
+      matchLabels:
+        monitoring: dev-stack
+    podMonitorNamespaceSelector:
+      matchLabels:
+        monitoring: dev-stack
+    ruleNamespaceSelector:
+      matchLabels:
+        monitoring: dev-stack
+    
+    # Data Retention
+    retention: 7d
+
+# --- Alertmanager Configuration ---
+alertmanager:
+  enabled: true
 EOT
 }

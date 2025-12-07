@@ -4,7 +4,8 @@ resource "kubernetes_namespace" "env_dev" {
   metadata {
     name = "env-dev"
     labels = {
-      name = "env-dev"
+      name       = "env-dev",
+      monitoring = "dev-stack"
     }
   }
 
