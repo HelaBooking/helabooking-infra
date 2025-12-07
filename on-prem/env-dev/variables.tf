@@ -86,20 +86,30 @@ nodeExporter:
 kubelet:
   enabled: true
 kubeApiServer:
-  enabled: true
+  enabled: false
 kubeControllerManager:
-  enabled: true
+  enabled: false
 kubeScheduler:
-  enabled: true
+  enabled: false
 kubeStateMetrics:
-  enabled: true
+  enabled: false
 coreDns:
-  enabled: true
+  enabled: false
 
 # --- Grafana Configuration ---
 grafana:
   enabled: true
   defaultDashboardsEnabled: true
+  additionalDataSources:
+    - name: Prometheus
+      type: prometheus
+      uid: prometheus
+      access: proxy
+      url: http://prometheus-dev-prometheus.env-dev.svc.cluster.local:9090
+      isDefault: true
+      jsonData:
+        httpMethod: POST
+        timeInterval: 30s
   sidecar:
     dashboards:
       enabled: true
