@@ -9,7 +9,7 @@
 # + Jenkins + Trivy (Vulnerability Scanning)
 # + Harbor
 # + ArgoCD
-# - Fluent Bit
+# + Fluent Bit
 # - Hashicorp Vault
 
 # - WSO2 Identity Server (Optional)
@@ -270,4 +270,24 @@ module "argocd_helm" {
     }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.cert_manager_helm]
+}
+
+# Deploying Fluent Bit
+module "fluentbit_helm" {
+  source = "../cluster-templates/helm-chart"
+
+  chart_name       = "fluent-bit"
+  chart_repository = "https://fluent.github.io/helm-charts"
+  chart            = "fluent-bit"
+  namespace        = kubernetes_namespace.logging.metadata[0].name
+  chart_version    = var.fluentbit_version
+  # Custom Values
+  custom_values = var.fluentbit_config_yaml
+  set_values = [
+    { name = "resources.requests.cpu", value = "100m" },
+    { name = "resources.requests.memory", value = "64Mi" },
+    { name = "resources.limits.cpu", value = "200m" },
+    { name = "resources.limits.memory", value = "128Mi" }
+  ]
+  depends_on_resource = [kubernetes_namespace.logging, module.traefik_helm]
 }
