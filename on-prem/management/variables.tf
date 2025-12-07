@@ -158,3 +158,58 @@ agent:
             emptyDir: {}
 EOT
 }
+
+# Fluent Bit
+variable "fluentbit_config_service" {
+  description = "Services YAML configuration for Fluent Bit"
+  type        = string
+  default     = <<EOT
+[SERVICE]
+    Flush        1
+    Daemon       Off
+    Log_Level    info
+    Parsers_File parsers.conf
+EOT
+}
+variable "fluentbit_config_inputs" {
+  description = "Inputs YAML configuration for Fluent Bit"
+  type        = string
+  default     = <<EOT
+[INPUT]
+    Name             tail
+    Path             /var/log/containers/*.log
+    Parser           docker
+    Tag              kube.*
+    Refresh_Interval 5
+    Mem_Buf_Limit    5MB
+    Skip_Long_Lines  On
+EOT
+}
+variable "fluentbit_config_filters" {
+  description = "Filters YAML configuration for Fluent Bit"
+  type        = string
+  default     = <<EOT
+# 1. Enrich logs with Kubernetes metadata (Pod Name, Namespace, etc.)
+[FILTER]
+    Name                kubernetes
+    Match               kube.*
+    Kube_URL            https://kubernetes.default.svc:443
+    Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+    Kube_Tag_Prefix     kube.var.log.containers.
+    Merge_Log           On
+    Keep_Log            Off
+
+# 2. Route 'management' namespace to the management tag
+[FILTER]
+    Name                rewrite_tag
+    Match               kube.*
+    Rule                $kubernetes['namespace_name'] ^(management)$ opensearch.management false
+
+# 2. Route 'env-dev' namespace to the DEV tag
+[FILTER]
+    Name                rewrite_tag
+    Match               kube.*
+    Rule                $kubernetes['namespace_name'] ^(env-dev)$ opensearch.dev false
+EOT
+}

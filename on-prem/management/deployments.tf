@@ -281,13 +281,16 @@ module "fluentbit_helm" {
   chart            = "fluent-bit"
   namespace        = kubernetes_namespace.management.metadata[0].name
   chart_version    = var.fluentbit_version
-  # Custom Values
-  custom_values = var.fluentbit_config_yaml
+
   set_values = [
     { name = "resources.requests.cpu", value = "100m" },
     { name = "resources.requests.memory", value = "64Mi" },
     { name = "resources.limits.cpu", value = "200m" },
-    { name = "resources.limits.memory", value = "128Mi" }
+    { name = "resources.limits.memory", value = "128Mi" },
+    { name = "config.service", value = var.fluentbit_config_service },
+    { name = "config.inputs", value = var.fluentbit_config_inputs },
+    { name = "config.filters", value = var.fluentbit_config_filters },
+    { name = "config.outputs", value = var.fluentbit_config_outputs }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm]
 }
