@@ -187,7 +187,7 @@ module "jenkins_helm" {
   set_values = [
     { name = "controller.admin.password", value = var.jenkins_admin_password },
     { name = "controller.serviceType", value = "ClusterIP" },
-    { name = "controller.resources.limits.cpu", value = "1500m" },
+    { name = "controller.resources.limits.cpu", value = "1000m" },
     { name = "controller.resources.limits.memory", value = "2Gi" },
     { name = "persistence.existingClaim", value = "jenkins-pvc" },
     { name = "controller.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_controller_node_selector_hostname },

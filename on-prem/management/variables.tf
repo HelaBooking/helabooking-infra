@@ -122,8 +122,8 @@ agent:
       cpu: "1000m"
       memory: "1Gi"
     requests:
-      cpu: "512m"
-      memory: "512Mi"
+      cpu: "100m"
+      memory: "200Mi"
 
   # Sidecar (BuildKit)
   additionalContainers:
@@ -142,8 +142,8 @@ agent:
           cpu: "1000m"
           memory: "1Gi"
         requests:
-          cpu: "500m"
-          memory: "512Mi"
+          cpu: "100m"
+          memory: "256Mi"
       volumeMounts:
         - name: workspace-volume
           mountPath: /workspace
