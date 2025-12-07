@@ -279,7 +279,7 @@ module "fluentbit_helm" {
   chart_name       = "fluent-bit"
   chart_repository = "https://fluent.github.io/helm-charts"
   chart            = "fluent-bit"
-  namespace        = kubernetes_namespace.logging.metadata[0].name
+  namespace        = kubernetes_namespace.management.metadata[0].name
   chart_version    = var.fluentbit_version
   # Custom Values
   custom_values = var.fluentbit_config_yaml
