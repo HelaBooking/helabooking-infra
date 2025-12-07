@@ -4,8 +4,7 @@ resource "kubernetes_namespace" "management" {
   metadata {
     name = "management"
     labels = {
-      name       = "management",
-      monitoring = "dev-stack"
+      name = "management"
     }
   }
   #ignore changes made by Rancher
@@ -21,8 +20,7 @@ resource "kubernetes_namespace" "cert_manager" {
   metadata {
     name = "cert-manager"
     labels = {
-      name       = "cert-manager",
-      monitoring = "dev-stack"
+      name = "cert-manager"
     }
   }
   #ignore changes made by Rancher
@@ -54,8 +52,7 @@ resource "kubernetes_namespace" "longhorn" {
   metadata {
     name = "longhorn-system"
     labels = {
-      name       = "longhorn-system",
-      monitoring = "dev-stack"
+      name = "longhorn-system"
     }
   }
   #ignore changes made by Rancher

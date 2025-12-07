@@ -91,8 +91,8 @@ module "grafana_dns" {
 
   # NGINX Proxy Manager variables
   nginx_proxy_manager_forward_protocol = "http"
-  nginx_proxy_manager_forward_service  = "grafana.${var.namespace}.${var.cluster_service_domain}"
-  nginx_proxy_manager_forward_port     = 3000
+  nginx_proxy_manager_forward_service  = "kube-prometheus-stack-grafana.${var.namespace}.${var.cluster_service_domain}"
+  nginx_proxy_manager_forward_port     = 80
 
   depends_on_resource = [module.opensearch_dashboard_dns] # To prevent 500 error when letsencrypt tries to create mutiple certificates
 }

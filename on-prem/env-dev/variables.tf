@@ -104,7 +104,7 @@ grafana:
     dashboards:
       enabled: true
       label: grafana_dashboard
-      searchNamespace: ALL
+      searchNamespace: ["env-dev", "management"]
 
 # --- Prometheus Configuration ---
 prometheus:
