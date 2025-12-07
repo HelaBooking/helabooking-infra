@@ -201,7 +201,6 @@ variable "fluentbit_config_filters" {
     Kube_Tag_Prefix     kube.var.log.containers.
     Merge_Log           On
     Keep_Log            Off
-    Replace_Dots        On
 
 # Route 'management' namespace to the management tag
 [FILTER]
