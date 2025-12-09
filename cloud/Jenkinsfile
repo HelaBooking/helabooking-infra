@@ -76,13 +76,13 @@ pipeline {
     }
 
     post {
-        always {
-            // cleanWs() might be missing on some agents, using reliable deleteDir()
-            deleteDir() 
-        }
         success {
             archiveArtifacts artifacts: 'cloud/k3s_config.yaml', fingerprint: true
             echo "Deployment Successful!"
+        }
+        cleanup {
+            // cleanWs() might be missing on some agents, using reliable deleteDir()
+            deleteDir() 
         }
     }
 }
