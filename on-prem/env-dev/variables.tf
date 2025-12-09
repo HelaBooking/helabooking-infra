@@ -105,7 +105,7 @@ grafana:
       type: prometheus
       uid: prometheus
       access: proxy
-      url: http://prometheus-dev-prometheus.env-dev.svc.cluster.local:9090
+      url: http://prometheus-dev-prometheus.env-dev.svc:9090
       isDefault: true
       jsonData:
         httpMethod: POST
@@ -115,6 +115,9 @@ grafana:
       enabled: true
       label: grafana_dashboard
       searchNamespace: ["env-dev", "management"]
+    datasources:
+      enabled: true
+      defaultDatasourceEnabled: false
 
 # --- Prometheus Configuration ---
 prometheus:
