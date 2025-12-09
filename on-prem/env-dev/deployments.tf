@@ -152,11 +152,11 @@ module "kube_prometheus_stack_helm" {
     # Resource specs
     { name = "prometheus.prometheusSpec.resources.requests.cpu", value = "200m" },
     { name = "prometheus.prometheusSpec.resources.requests.memory", value = "512Mi" },
-    { name = "prometheus.prometheusSpec.resources.limits.cpu", value = "1500m" },
+    { name = "prometheus.prometheusSpec.resources.limits.cpu", value = "750m" },
     { name = "prometheus.prometheusSpec.resources.limits.memory", value = "1Gi" },
     { name = "prometheusOperator.resources.requests.cpu", value = "100m" },
     { name = "prometheusOperator.resources.requests.memory", value = "256Mi" },
-    { name = "prometheusOperator.resources.limits.cpu", value = "1000m" },
+    { name = "prometheusOperator.resources.limits.cpu", value = "500m" },
     { name = "prometheusOperator.resources.limits.memory", value = "1Gi" },
     { name = "alertmanager.alertmanagerSpec.resources.requests.cpu", value = "100m" },
     { name = "alertmanager.alertmanagerSpec.resources.requests.memory", value = "256Mi" },

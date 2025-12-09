@@ -56,7 +56,7 @@ variable "opensearch_dashboard_helm_version" {
 variable "kube_prometheus_stack_helm_version" {
   description = "Version of Grafana Helm chart"
   type        = string
-  default     = "79.12.0"
+  default     = "80.2.0"
 }
 
 # Specific configurations
@@ -100,6 +100,16 @@ coreDns:
 grafana:
   enabled: true
   defaultDashboardsEnabled: true
+  
+  # Enable Persistence (PVC)
+  persistence:
+    enabled: true
+    type: statefulset
+    storageClassName: longhorn
+    accessModes: ["ReadWriteOnce"]
+    size: 2Gi
+
+  # FIX: Manually define the Data Source to ensure connection
   additionalDataSources:
     - name: Prometheus
       type: prometheus
@@ -110,6 +120,7 @@ grafana:
       jsonData:
         httpMethod: POST
         timeInterval: 30s
+
   sidecar:
     dashboards:
       enabled: true
