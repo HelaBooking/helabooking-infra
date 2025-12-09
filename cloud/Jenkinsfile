@@ -46,9 +46,10 @@ pipeline {
                         // 2. Fix Key Permissions
                         sh 'chmod 600 generated_key.pem'
 
-                        // 3. Wait for SSH (Simple Retry Loop)
+                        // 3. Wait for SSH (Simple Retry Loop using SSH itself)
+                        // We use the SSH client to check connectivity instead of 'nc' which is missing
                         sh """
-                        timeout 300 bash -c 'until nc -z -v -w5 ${masterIp} 22; do echo "Waiting for SSH..."; sleep 5; done'
+                        timeout 300 bash -c 'until ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i generated_key.pem ubuntu@${masterIp} echo "SSH Ready"; do echo "Waiting for SSH..."; sleep 10; done'
                         """
 
                         // 4. Fetch k3s.yaml via SCP
