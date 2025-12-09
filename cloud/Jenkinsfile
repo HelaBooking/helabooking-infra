@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    options {
+        ansiColor('xterm')
+    }
+
     environment {
         TF_ROOT      = "${WORKSPACE}/cloud"
         AWS_REGION   = "ap-southeast-1"
