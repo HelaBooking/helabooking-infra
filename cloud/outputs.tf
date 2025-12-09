@@ -33,6 +33,11 @@ output "ssh_connect_command" {
   value       = "ssh -i generated_key.pem ubuntu@${aws_instance.master.public_ip}"
 }
 
+output "private_key_path" {
+  value       = "${path.module}/generated_key.pem"
+  description = "Path to the private key"
+}
+
 output "k3s_token" {
   description = "Cluster Token (sensitive)"
   value       = random_password.k3s_token.result
