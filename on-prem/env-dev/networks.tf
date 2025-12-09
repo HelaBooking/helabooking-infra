@@ -10,10 +10,10 @@ resource "kubernetes_namespace" "env_dev" {
   }
 
   #ignore changes made by Rancher
-  lifecycle {
-    ignore_changes = [
-      metadata[0].labels,
-      metadata[0].annotations,
-    ]
-  }
+  # lifecycle {
+  #   ignore_changes = [
+  #     metadata[0].labels,
+  #     metadata[0].annotations,
+  #   ]
+  # }
 }

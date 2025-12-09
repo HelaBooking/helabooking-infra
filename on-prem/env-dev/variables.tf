@@ -85,16 +85,23 @@ nodeExporter:
   enabled: true
 kubelet:
   enabled: true
+  serviceMonitor:
+    https: true
+    insecureSkipVerify: true
 kubeApiServer:
-  enabled: false
+  enabled: true
 kubeControllerManager:
-  enabled: false
+  enabled: false # Disable for K3s
 kubeScheduler:
-  enabled: false
+  enabled: false # Disable for K3s
 kubeStateMetrics:
-  enabled: false
+  enabled: true
 coreDns:
-  enabled: false
+  enabled: false # Disable for K3s
+kubeEtcd:
+  enabled: false # Disable for K3s
+kubeProxy:
+  enabled: false # Disable for K3s
 
 # --- Grafana Configuration ---
 grafana:
