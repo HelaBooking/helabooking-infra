@@ -1,0 +1,75 @@
+---
+- name: Harden Server
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache and upgrade packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+        cache_valid_time: 3600
+
+    - name: Install essential packages
+      apt:
+        name:
+          - fail2ban
+          - ufw
+          - curl
+          - git
+          - unzip
+        state: present
+
+    - name: Ensure fail2ban is running
+      service:
+        name: fail2ban
+        state: started
+        enabled: yes
+
+    - name: Configure UFW defaults
+      ufw:
+        direction: incoming
+        policy: deny
+        state: enabled
+
+    - name: Allow SSH (Rate Limited)
+      ufw:
+        rule: limit
+        port: ssh
+        proto: tcp
+
+    - name: Allow HTTP
+      ufw:
+        rule: allow
+        port: '80'
+        proto: tcp
+
+    - name: Allow HTTPS
+      ufw:
+        rule: allow
+        port: '443'
+        proto: tcp
+
+    - name: Allow K8s API (6443)
+      ufw:
+        rule: allow
+        port: '6443'
+        proto: tcp
+
+    - name: Allow K8s Kubelet (10250)
+      ufw:
+        rule: allow
+        port: '10250'
+        proto: tcp
+
+    - name: Disable password authentication for SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+      notify: Restart SSH
+
+  handlers:
+    - name: Restart SSH
+      service:
+        name: ssh
+        state: restarted

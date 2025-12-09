@@ -8,6 +8,7 @@ pipeline {
     environment {
         TF_ROOT      = "${WORKSPACE}/cloud"
         AWS_REGION   = "ap-southeast-1"
+        ANSIBLE_ROOT = "${WORKSPACE}/cloud/ansible"
     }
 
     stages {
@@ -35,6 +36,27 @@ pipeline {
                     dir(TF_ROOT) {
                         // Apply without locking to create the lock table first
                         sh 'terraform apply -auto-approve -lock=false tfplan'
+                    }
+                }
+            }
+        }
+
+        stage('Ansible Configuration') {
+            steps {
+                dir(ANSIBLE_ROOT) {
+                    // Install Ansible (assuming Debian-based agent)
+                    sh 'apt-get update && apt-get install -y python3 python3-pip'
+                    sh 'pip3 install ansible --break-system-packages'
+                    
+                    // Install dependencies
+                    sh 'ansible-galaxy install -r requirements.yml'
+                    
+                    // Fix permissions for the key
+                    sh 'chmod 600 ../generated_key.pem'
+                    
+                    // Run Playbook
+                    withEnv(['ANSIBLE_HOST_KEY_CHECKING=False']) {
+                        sh 'ansible-playbook -i inventory.ini playbooks/site.yml'
                     }
                 }
             }

@@ -1,4 +1,6 @@
 ---
+- import_playbook: harden.yml
+
 - name: Post-Provisioning Configuration
   hosts: master
   gather_facts: no
