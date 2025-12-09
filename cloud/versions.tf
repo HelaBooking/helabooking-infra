@@ -21,15 +21,15 @@ terraform {
   }
 
   # ---------------------------------------------------------------------------
-  # BACKEND CONFIGURATION (Uncomment AFTER first apply)
+  # BACKEND CONFIGURATION
   # ---------------------------------------------------------------------------
-  # backend "s3" {
-  #   bucket         = "helabooking-terraform-state-xxxx" # Replace xxxx with your random suffix
-  #   key            = "staging/terraform.tfstate"
-  #   region         = "us-east-1"
-  #   dynamodb_table = "helabooking-terraform-locks"
-  #   encrypt        = true
-  # }
+  backend "s3" {
+    bucket         = "helabooking-terraform-state-132c058a" # Bucket from previous run
+    key            = "staging/terraform.tfstate"
+    region         = "ap-southeast-1"
+    dynamodb_table = "helabooking-terraform-locks"
+    encrypt        = true
+  }
 }
 
 provider "aws" {
