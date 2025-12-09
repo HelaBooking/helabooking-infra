@@ -96,3 +96,20 @@ module "grafana_dns" {
 
   depends_on_resource = [module.opensearch_dashboard_dns] # To prevent 500 error when letsencrypt tries to create mutiple certificates
 }
+
+# Deploying Prometheus DNS Record
+module "prometheus_dns" {
+  source = "../cluster-templates/dns-record"
+
+  # Cloudflare variables
+  cf_dns_record_name  = "prometheus.${var.cf_default_root_domain}"
+  cf_dns_record_value = "192.168.1.100" # Only local network access
+  cf_dns_record_type  = "A"
+
+  # NGINX Proxy Manager variables
+  nginx_proxy_manager_forward_protocol = "http"
+  nginx_proxy_manager_forward_service  = "prometheus-dev-prometheus.${var.namespace}.${var.cluster_service_domain}"
+  nginx_proxy_manager_forward_port     = 9090
+
+  depends_on_resource = [module.grafana_dns] # To prevent 500 error when letsencrypt tries to create mutiple certificates
+}
