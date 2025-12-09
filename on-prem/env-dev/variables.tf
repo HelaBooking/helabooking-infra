@@ -143,6 +143,12 @@ prometheus:
     ruleNamespaceSelector:
       matchLabels:
         monitoring: dev-stack
+        
+    # Setting these to '{}' (Empty) means "Select Everything in the namespace"
+    serviceMonitorSelector: {}
+    podMonitorSelector: {}
+    ruleSelector: {}
+    probeSelector: {}
     
     # Data Retention
     retention: 7d
