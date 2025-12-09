@@ -4,32 +4,34 @@ resource "kubernetes_namespace" "management" {
   metadata {
     name = "management"
     labels = {
-      name = "management"
+      name       = "management",
+      monitoring = "dev-stack"
     }
   }
   #ignore changes made by Rancher
-  lifecycle {
-    ignore_changes = [
-      metadata[0].labels,
-      metadata[0].annotations,
-    ]
-  }
+  # lifecycle {
+  #   ignore_changes = [
+  #     metadata[0].labels,
+  #     metadata[0].annotations,
+  #   ]
+  # }
 }
 
 resource "kubernetes_namespace" "cert_manager" {
   metadata {
     name = "cert-manager"
     labels = {
-      name = "cert-manager"
+      name       = "cert-manager",
+      monitoring = "dev-stack"
     }
   }
   #ignore changes made by Rancher
-  lifecycle {
-    ignore_changes = [
-      metadata[0].labels,
-      metadata[0].annotations,
-    ]
-  }
+  # lifecycle {
+  #   ignore_changes = [
+  #     metadata[0].labels,
+  #     metadata[0].annotations,
+  #   ]
+  # }
 }
 
 # resource "kubernetes_namespace" "rancher" {
@@ -52,14 +54,15 @@ resource "kubernetes_namespace" "longhorn" {
   metadata {
     name = "longhorn-system"
     labels = {
-      name = "longhorn-system"
+      name       = "longhorn-system",
+      monitoring = "dev-stack"
     }
   }
   #ignore changes made by Rancher
-  lifecycle {
-    ignore_changes = [
-      metadata[0].labels,
-      metadata[0].annotations,
-    ]
-  }
+  # lifecycle {
+  #   ignore_changes = [
+  #     metadata[0].labels,
+  #     metadata[0].annotations,
+  #   ]
+  # }
 }
