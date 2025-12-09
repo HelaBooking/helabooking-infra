@@ -42,28 +42,30 @@ pipeline {
 
         stage('Fetch Kubeconfig') {
             steps {
-                dir(TF_ROOT) {
-                    script {
-                        // 1. Get Master IP from Terraform Output
-                        def masterIp = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
-                        echo "Master IP is: ${masterIp}"
+                withCredentials([usernamePassword(credentialsId: 'aws-cloud-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    dir(TF_ROOT) {
+                        script {
+                            // 1. Get Master IP from Terraform Output
+                            def masterIp = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
+                            echo "Master IP is: ${masterIp}"
 
-                        // 2. Fix Key Permissions
-                        sh 'chmod 600 generated_key.pem'
+                            // 2. Fix Key Permissions
+                            sh 'chmod 600 generated_key.pem'
 
-                        // 3. Wait for SSH (Simple Retry Loop using SSH itself)
-                        // We use the SSH client to check connectivity instead of 'nc' which is missing
-                        sh """
-                        timeout 300 bash -c 'until ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i generated_key.pem ubuntu@${masterIp} echo "SSH Ready"; do echo "Waiting for SSH..."; sleep 10; done'
-                        """
+                            // 3. Wait for SSH (Simple Retry Loop using SSH itself)
+                            // We use the SSH client to check connectivity instead of 'nc' which is missing
+                            sh """
+                            timeout 300 bash -c 'until ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i generated_key.pem ubuntu@${masterIp} echo "SSH Ready"; do echo "Waiting for SSH..."; sleep 10; done'
+                            """
 
-                        // 4. Fetch k3s.yaml via SCP
-                        // We use StrictHostKeyChecking=no to avoid prompt
-                        sh "scp -o StrictHostKeyChecking=no -i generated_key.pem ubuntu@${masterIp}:/etc/rancher/k3s/k3s.yaml ./k3s_config.yaml"
+                            // 4. Fetch k3s.yaml via SCP
+                            // We use StrictHostKeyChecking=no to avoid prompt
+                            sh "scp -o StrictHostKeyChecking=no -i generated_key.pem ubuntu@${masterIp}:/etc/rancher/k3s/k3s.yaml ./k3s_config.yaml"
 
-                        // 5. Update Localhost to Public IP in the config file
-                        sh "sed -i 's/127.0.0.1/${masterIp}/g' k3s_config.yaml"
-                        sh "sed -i 's/localhost/${masterIp}/g' k3s_config.yaml"
+                            // 5. Update Localhost to Public IP in the config file
+                            sh "sed -i 's/127.0.0.1/${masterIp}/g' k3s_config.yaml"
+                            sh "sed -i 's/localhost/${masterIp}/g' k3s_config.yaml"
+                        }
                     }
                 }
             }
