@@ -58,9 +58,12 @@ pipeline {
                             timeout 300 bash -c 'until ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i generated_key.pem ubuntu@${masterIp} echo "SSH Ready"; do echo "Waiting for SSH..."; sleep 10; done'
                             """
 
-                            // 4. Fetch k3s.yaml via SCP
-                            // We use StrictHostKeyChecking=no to avoid prompt
-                            sh "scp -o StrictHostKeyChecking=no -i generated_key.pem ubuntu@${masterIp}:/etc/rancher/k3s/k3s.yaml ./k3s_config.yaml"
+                            // 4. Prepare k3s.yaml for download (permission fix)
+                        sh "ssh -o StrictHostKeyChecking=no -i generated_key.pem ubuntu@${masterIp} 'sudo cp /etc/rancher/k3s/k3s.yaml /tmp/k3s.yaml && sudo chown ubuntu:ubuntu /tmp/k3s.yaml'"
+
+                        // 5. Fetch k3s.yaml via SCP
+                        // We use StrictHostKeyChecking=no to avoid prompt
+                        sh "scp -o StrictHostKeyChecking=no -i generated_key.pem ubuntu@${masterIp}:/tmp/k3s.yaml ./k3s_config.yaml"
 
                             // 5. Update Localhost to Public IP in the config file
                             sh "sed -i 's/127.0.0.1/${masterIp}/g' k3s_config.yaml"
