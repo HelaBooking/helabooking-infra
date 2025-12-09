@@ -54,7 +54,7 @@ module "pgadmin_deployment" {
 
   app_name       = "pgadmin"
   namespace      = var.namespace
-  replicas       = 1
+  replicas       = 0
   selector_label = "pgadmin"
   app_image      = "dpage/pgadmin4:${var.pgadmin_image}"
   container_ports = [
