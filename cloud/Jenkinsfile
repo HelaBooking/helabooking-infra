@@ -3,59 +3,71 @@ pipeline {
 
     environment {
         // --------------------------------------------------------------------
-        // CREDENTIALS BINDING
-        // --------------------------------------------------------------------
-        // Requirement: Create a "Username with password" credential in Jenkins
-        // ID: aws-cloud-credentials
-        // Username: <Your AWS Access Key ID>
-        // Password: <Your AWS Secret Access Key>
-        AWS_CREDS = credentials('aws-cloud-credentials')
-        
-        // Export as standard AWS Environment Variables
-        AWS_ACCESS_KEY_ID     = "${AWS_CREDS_USR}"
-        AWS_SECRET_ACCESS_KEY = "${AWS_CREDS_PSW}"
-        AWS_REGION            = "us-east-1"
-        
-        // --------------------------------------------------------------------
         // PATHS
         // --------------------------------------------------------------------
         TF_ROOT      = "${WORKSPACE}/cloud"
         ANSIBLE_ROOT = "${WORKSPACE}/cloud/ansible"
+        AWS_REGION   = "us-east-1"
     }
 
     stages {
         stage('Validate Environment') {
             steps {
-                sh 'terraform --version'
-                sh 'ansible --version'
-                sh 'echo "Deploying to Region: $AWS_REGION"'
+                // Wrapper for AWS Credentials Plugin
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-cloud-credentials',
+                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                ]]) {
+                    sh 'terraform --version'
+                    sh 'ansible --version'
+                    sh 'echo "Deploying to Region: $AWS_REGION"'
+                }
             }
         }
 
         stage('Terraform Init') {
             steps {
-                dir(TF_ROOT) {
-                    // Initialize Terraform (downloads providers)
-                    sh 'terraform init'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-cloud-credentials',
+                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                ]]) {
+                    dir(TF_ROOT) {
+                        sh 'terraform init'
+                    }
                 }
             }
         }
 
         stage('Terraform Plan') {
             steps {
-                dir(TF_ROOT) {
-                    // Create an execution plan
-                    sh 'terraform plan -out=tfplan'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-cloud-credentials',
+                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                ]]) {
+                    dir(TF_ROOT) {
+                        sh 'terraform plan -out=tfplan'
+                    }
                 }
             }
         }
 
         stage('Terraform Apply') {
             steps {
-                dir(TF_ROOT) {
-                    // Apply the plan to create/update infrastructure
-                    // This creates EC2s and generates 'ansible/inventory.ini'
-                    sh 'terraform apply -auto-approve tfplan'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-cloud-credentials',
+                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                ]]) {
+                    dir(TF_ROOT) {
+                        sh 'terraform apply -auto-approve tfplan'
+                    }
                 }
             }
         }
