@@ -28,7 +28,7 @@ data "aws_iam_policy_document" "github_trust" {
 }
 
 resource "aws_iam_role" "ci_cd" {
-  name               = "HelabookingDeployRole"
+  name               = "HelabookingDeployRole-${random_id.bucket_suffix.hex}"
   assume_role_policy = data.aws_iam_policy_document.github_trust.json
 }
 
