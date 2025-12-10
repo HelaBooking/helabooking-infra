@@ -99,6 +99,7 @@ module "opensearch_helm" {
     { name = "replicas", value = "1" },
     { name = "minimumMasterNodes", value = "1" },
     # Resource specifications
+    { name = "nodeSelector.kubernetes\\.io/hostname", value = "pico-node" },
     { name = "persistence.enabled", value = "true" },
     { name = "persistence.size", value = "10Gi" },
     { name = "persistence.storageClass", value = "longhorn" },
@@ -127,6 +128,7 @@ module "opensearch_dashboard_helm" {
     { name = "opensearchHosts", value = "https://opensearch-cluster-master.${var.namespace}.${var.cluster_service_domain}:9200" },
     { name = "replicaCount", value = "1" },
     # Resource specifications
+    { name = "nodeSelector.kubernetes\\.io/hostname", value = "pico-node" },
     { name = "resources.requests.cpu", value = "250m" },
     { name = "resources.requests.memory", value = "256Mi" },
     { name = "resources.limits.cpu", value = "500m" },
