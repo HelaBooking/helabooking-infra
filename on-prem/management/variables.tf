@@ -103,6 +103,9 @@ variable "jenkins_agent_config" {
   default     = <<EOT
 agent:
   podName: "jenkins-agent"
+  # Max Number of agents
+  containerCap: 1
+  
   # Node Selection 
   nodeSelector:
     kubernetes.io/hostname: "galaxy-node"
