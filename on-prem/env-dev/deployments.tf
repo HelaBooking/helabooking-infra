@@ -204,7 +204,16 @@ module "istio_ingress_gateway_dev_helm" {
 
   set_values = [
     { name = "revision", value = "dev" },
-    { name = "gateways.istio-ingressgateway.type", value = "ClusterIP" }
+    { name = "resources.limits.cpu", value = "500m" },
+    { name = "resources.limits.memory", value = "512Mi" },
+
+    # Network & Service Settings
+    { name = "service.type", value = "ClusterIP" },
+    { name = "autoscaling.enabled", value = "false" },
+
+    # This gateway will select pods with label: istio: ingressgateway-dev
+    { name = "labels.istio", value = "ingressgateway-dev" },
+    { name = "labels.app", value = "istio-ingressgateway-dev" }
   ]
   depends_on = [module.istiod_dev_helm]
 }
