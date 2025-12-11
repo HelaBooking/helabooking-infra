@@ -177,4 +177,36 @@ module "kube_prometheus_stack_helm" {
   depends_on = [kubernetes_namespace.env_dev]
 }
 
-# Deploying IstioD for the Namespace
+# Deploying Istio
+# Deploying Istiod for the Namespace
+module "istiod_dev_helm" {
+  source           = "../cluster-templates/helm-chart"
+  chart_name       = "istiod-dev"
+  chart_repository = "https://istio-release.storage.googleapis.com/charts"
+  chart            = "istiod"
+  namespace        = var.istio_namespace
+  chart_version    = var.istiod_helm_version
+
+  set_values = [
+    { name = "revision", value = "dev" },
+    { name = "pilot.resources.requests.cpu", value = "100m" },
+    { name = "pilot.resources.requests.memory", value = "128Mi" }
+  ]
+}
+# Deploying Istio Ingress Gateway
+module "istio_ingress_gateway_dev_helm" {
+  source           = "../cluster-templates/helm-chart"
+  chart_name       = "istio-ingress-dev"
+  chart_repository = "https://istio-release.storage.googleapis.com/charts"
+  chart            = "gateway"
+  namespace        = var.istio_namespace
+  chart_version    = var.istiod_helm_version
+
+  set_values = [
+    { name = "revision", value = "dev" },
+    { name = "gateways.istio-ingressgateway.resources.requests.cpu", value = "100m" },
+    { name = "gateways.istio-ingressgateway.resources.requests.memory", value = "128Mi" },
+    { name = "gateways.istio-ingressgateway.type", value = "ClusterIP" }
+  ]
+  depends_on = [module.istiod_dev_helm]
+}

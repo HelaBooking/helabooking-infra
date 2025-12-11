@@ -58,6 +58,16 @@ variable "kube_prometheus_stack_helm_version" {
   type        = string
   default     = "80.2.0"
 }
+variable "istio_namespace" {
+  description = "Namespace where Istio is installed"
+  type        = string
+  default     = "istio-system"
+}
+variable "istiod_helm_version" {
+  description = "Version of Istiod Helm chart"
+  type        = string
+  default     = "1.28.1"
+}
 
 # Specific configurations
 # OpenSearch
