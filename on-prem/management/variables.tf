@@ -84,6 +84,11 @@ variable "fluentbit_version" {
   type        = string
   default     = "0.54.0"
 }
+variable "istio_base_helm_version" {
+  description = "Version of Istio Helm chart"
+  type        = string
+  default     = "1.28.1"
+}
 
 # Specific configurations
 # Jenkins

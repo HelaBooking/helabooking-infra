@@ -10,8 +10,9 @@
 # + Harbor
 # + ArgoCD
 # + Fluent Bit
-# - Hashicorp Vault
+# + Istio Base Components
 
+# - Hashicorp Vault
 # - WSO2 Identity Server (Optional)
 # - Ansible (Outside of cluster)
 
@@ -293,4 +294,16 @@ module "fluentbit_helm" {
     { name = "config.outputs", value = var.fluentbit_config_outputs }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm]
+}
+
+# Deploying Istio Base Chart
+module "istio_base_helm" {
+  source           = "../cluster-templates/helm-chart"
+  chart_name       = "istio-base"
+  chart_repository = "https://istio-release.storage.googleapis.com/charts"
+  chart            = "base"
+  namespace        = kubernetes_namespace.istio_system.metadata[0].name
+  chart_version    = var.istio_base_helm_version
+
+  depends_on = [kubernetes_namespace.istio_system]
 }

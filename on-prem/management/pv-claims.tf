@@ -1,5 +1,5 @@
 ############################## Cluster Management PVCs ##############################
-# - NGINX Proxy Manager
+# + NGINX Proxy Manager
 
 # PVC for NGINX Proxy Manager
 module "nginx_proxy_manager_data_pvc" {
@@ -25,7 +25,9 @@ module "nginx_proxy_manager_letsecrypt_pvc" {
 
 
 ############################## Project PVCs ##############################
-# - Jenkins
+# + Jenkins
+# + Harbor
+
 
 # PVC for Jenkins
 module "jenkins_pvc" {
