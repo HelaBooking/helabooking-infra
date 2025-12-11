@@ -106,7 +106,8 @@ module "opensearch_helm" {
     { name = "resources.requests.cpu", value = "500m" },
     { name = "resources.requests.memory", value = "500Mi" },
     { name = "resources.limits.cpu", value = "1000m" },
-    { name = "resources.limits.memory", value = "1Gi" },
+    { name = "resources.limits.memory", value = "600Mi" },
+    { name = "resources.limits.memory.swap", value = "600Mi" },
     # Extra Variables
     { name = "extraEnvs[0].name", value = "OPENSEARCH_INITIAL_ADMIN_PASSWORD" },
     { name = "extraEnvs[0].value", value = var.opensearch_admin_password },
@@ -130,9 +131,10 @@ module "opensearch_dashboard_helm" {
     # Resource specifications
     { name = "nodeSelector.kubernetes\\.io/hostname", value = "pico-node" },
     { name = "resources.requests.cpu", value = "250m" },
-    { name = "resources.requests.memory", value = "256Mi" },
+    { name = "resources.requests.memory", value = "200Mi" },
     { name = "resources.limits.cpu", value = "500m" },
-    { name = "resources.limits.memory", value = "512Mi" }
+    { name = "resources.limits.memory", value = "300Mi" },
+    { name = "resources.limits.memory.swap", value = "200Mi" },
   ]
   depends_on = [kubernetes_namespace.env_dev, module.opensearch_helm]
 }
@@ -153,17 +155,24 @@ module "kube_prometheus_stack_helm" {
     { name = "grafana.service.type", value = "ClusterIP" },
     # Resource specs
     { name = "prometheus.prometheusSpec.resources.requests.cpu", value = "200m" },
-    { name = "prometheus.prometheusSpec.resources.requests.memory", value = "512Mi" },
+    { name = "prometheus.prometheusSpec.resources.requests.memory", value = "400Mi" },
     { name = "prometheus.prometheusSpec.resources.limits.cpu", value = "750m" },
-    { name = "prometheus.prometheusSpec.resources.limits.memory", value = "1Gi" },
+    { name = "prometheus.prometheusSpec.resources.limits.memory", value = "500Mi" },
+    { name = "prometheus.prometheusSpec.resources.limits.memory.swap", value = "500Mi" },
     { name = "prometheusOperator.resources.requests.cpu", value = "100m" },
-    { name = "prometheusOperator.resources.requests.memory", value = "256Mi" },
-    { name = "prometheusOperator.resources.limits.cpu", value = "500m" },
-    { name = "prometheusOperator.resources.limits.memory", value = "1Gi" },
+    { name = "prometheusOperator.resources.requests.memory", value = "200Mi" },
+    { name = "prometheusOperator.resources.limits.cpu", value = "400m" },
+    { name = "prometheusOperator.resources.limits.memory", value = "500Mi" },
+    { name = "prometheusOperator.resources.limits.memory.swap", value = "500Mi" },
     { name = "alertmanager.alertmanagerSpec.resources.requests.cpu", value = "100m" },
-    { name = "alertmanager.alertmanagerSpec.resources.requests.memory", value = "256Mi" },
+    { name = "alertmanager.alertmanagerSpec.resources.requests.memory", value = "200Mi" },
     { name = "alertmanager.alertmanagerSpec.resources.limits.cpu", value = "500m" },
-    { name = "alertmanager.alertmanagerSpec.resources.limits.memory", value = "512Mi" },
+    { name = "alertmanager.alertmanagerSpec.resources.limits.memory", value = "400Mi" },
+    { name = "grafana.resources.requests.cpu", value = "100m" },
+    { name = "grafana.resources.requests.memory", value = "256Mi" },
+    { name = "grafana.resources.limits.cpu", value = "500m" },
+    { name = "grafana.resources.limits.memory", value = "500Mi" },
+    { name = "grafana.resources.limits.memory.swap", value = "500Mi" },
     # Storage specs
     { name = "prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage", value = "5Gi" },
     { name = "prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName", value = "longhorn" },
@@ -172,3 +181,5 @@ module "kube_prometheus_stack_helm" {
   ]
   depends_on = [kubernetes_namespace.env_dev]
 }
+
+# Deploying Istio
