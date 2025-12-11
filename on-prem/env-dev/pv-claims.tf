@@ -18,10 +18,8 @@ module "rabbitmq_data_pvc" {
 
 ################################ Supporting Service Related PVCs ################################
 # + PGAdmin
-# - Grafana
-# - Prometheus
-# - OpenSearch
-# - OpenSearch Dashboard
+# + Grafana & Prometheus (managed by Operator)
+# + OpenSearch & OpenSearch Dashboard (managed by helm)
 
 # PVC for PGAdmin
 module "pgadmin_data_pvc" {

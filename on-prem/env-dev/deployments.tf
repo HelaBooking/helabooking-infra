@@ -5,7 +5,7 @@
 # + RabbitMQ
 ## Supporting Services
 # + PGAdmin
-# - Istio (Per Namespace)
+# + Istio (Per Namespace)
 # + Grafana & Prometheus (as Operators)
 # + OpenSearch & OpenSearch Dashboard
 
@@ -177,4 +177,4 @@ module "kube_prometheus_stack_helm" {
   depends_on = [kubernetes_namespace.env_dev]
 }
 
-# Deploying Istio
+# Deploying IstioD for the Namespace

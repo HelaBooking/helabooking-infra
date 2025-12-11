@@ -4,16 +4,14 @@
 
 ################################ App Service Related Services ################################
 # Deploying following services:
-# - RabbitMQ Service (Deployed through Helm Chart - rabbitmq.env-dev.svc.cluster.local:5672)
-# - Redis Service (Deployed through Helm Chart - redis.env-dev.svc.cluster.local:6379)
+# + RabbitMQ Service (Deployed through Helm Chart - rabbitmq.env-dev.svc.cluster.local:5672)
+# + Redis Service (Deployed through Helm Chart - redis.env-dev.svc.cluster.local:6379)
 
 ################################ Supporting Service Related Services ################################
 # Deploying following services:
 # + PGAdmin Service
-# - Grafana Service
-# - Prometheus Service
-# - OpenSearch Service
-# - OpenSearch Dashboard Service
+# + Grafana Service & Prometheus Service (managed by Operator)
+# + OpenSearch Service & OpenSearch Dashboard Service (managed by helm)
 # - Istio (Related Services)
 
 # Deploying PGAdmin Service
