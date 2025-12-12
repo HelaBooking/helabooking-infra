@@ -6,6 +6,7 @@
 ## Supporting Services
 # + PGAdmin
 # + Istio (Per Namespace)
+# + Kiali Dashboard (Istio monitoring)
 # + Grafana & Prometheus (as Operators)
 # + OpenSearch & OpenSearch Dashboard
 
@@ -216,4 +217,35 @@ module "istio_ingress_gateway_dev_helm" {
     { name = "labels.app", value = "istio-ingressgateway-dev" }
   ]
   depends_on = [module.istiod_dev_helm]
+}
+# Deploying Kiali Dashboard
+module "kiali_helm" {
+  source           = "../cluster-templates/helm-chart"
+  chart_name       = "kiali-server"
+  chart_repository = "https://kiali.org/helm-charts"
+  chart            = "kiali-server"
+  namespace        = var.istio_namespace
+  chart_version    = var.kiali_helm_version
+
+  set_values = [
+    { name = "instance_name", value = "kiali" },
+    { name = "deployment.replicas", value = "1" }, # Scale down when not in use
+
+    { name = "auth.strategy", value = "anonymous" }, # No authentication for dev environment
+    { name = "deployment.cluster_wide_access", value = "false" },
+    { name = "deployment.discovery_selectors.default[0].matchLabels.istio\\.io/rev", value = "dev" },
+    { name = "deployment.discovery_selectors.default[1].matchLabels.kubernetes\\.io/metadata\\.name", value = "istio-system" },
+
+    { name = "external_services.prometheus.url", value = "http://prometheus-dev-prometheus.env-dev.svc.cluster.local:9090" },
+    { name = "server.port", value = "20001" },
+    { name = "server.web_root", value = "/" },
+
+    # Resource specifications
+    { name = "deployment.resources.requests.cpu", value = "50m" },
+    { name = "deployment.resources.requests.memory", value = "100Mi" },
+    { name = "deployment.resources.limits.cpu", value = "500m" },
+    { name = "deployment.resources.limits.memory", value = "500Mi" },
+  ]
+
+  depends_on = [module.istiod_dev_helm, kubernetes_namespace.env_dev]
 }

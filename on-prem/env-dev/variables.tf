@@ -58,11 +58,6 @@ variable "kube_prometheus_stack_helm_version" {
   type        = string
   default     = "80.2.0"
 }
-variable "istio_namespace" {
-  description = "Namespace where Istio is installed"
-  type        = string
-  default     = "istio-system"
-}
 variable "istiod_helm_version" {
   description = "Version of Istiod Helm chart"
   type        = string
@@ -72,6 +67,11 @@ variable "istiogateway_helm_version" {
   description = "Version of Istio Gateway Helm chart"
   type        = string
   default     = "1.28.1"
+}
+variable "kiali_helm_version" {
+  description = "Version of Kiali Helm chart"
+  type        = string
+  default     = "2.19.0"
 }
 
 # Specific configurations
@@ -179,4 +179,11 @@ prometheus:
 alertmanager:
   enabled: true
 EOT
+}
+
+# Istio 
+variable "istio_namespace" {
+  description = "Namespace where Istio is installed"
+  type        = string
+  default     = "istio-system"
 }
