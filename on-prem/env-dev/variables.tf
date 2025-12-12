@@ -68,6 +68,11 @@ variable "istiod_helm_version" {
   type        = string
   default     = "1.28.1"
 }
+variable "istiogateway_helm_version" {
+  description = "Version of Istio Gateway Helm chart"
+  type        = string
+  default     = "1.28.1"
+}
 
 # Specific configurations
 # OpenSearch

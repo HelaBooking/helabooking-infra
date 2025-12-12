@@ -200,7 +200,7 @@ module "istio_ingress_gateway_dev_helm" {
   chart_repository = "https://istio-release.storage.googleapis.com/charts"
   chart            = "gateway"
   namespace        = var.istio_namespace
-  chart_version    = var.istiod_helm_version
+  chart_version    = var.istiogateway_helm_version
 
   set_values = [
     { name = "revision", value = "dev" },
@@ -211,8 +211,8 @@ module "istio_ingress_gateway_dev_helm" {
     { name = "service.type", value = "ClusterIP" },
     { name = "autoscaling.enabled", value = "false" },
 
-    # This gateway will select pods with label: istio: ingressgateway-dev
-    { name = "labels.istio", value = "ingressgateway-dev" },
+    # This gateway will select label: istio: ingressgateway-dev
+    { name = "labels.istio", value = "ingressgateway-dev-public" },
     { name = "labels.app", value = "istio-ingressgateway-dev" }
   ]
   depends_on = [module.istiod_dev_helm]
