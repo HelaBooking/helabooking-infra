@@ -221,17 +221,9 @@ variable "istio_namespace" {
   default     = "istio-system"
 }
 variable "istio_sidecar_monitoring_config" {
-  description = "Istio Sidecar Monitoring Configuration"
+  description = "YAML configuration for Istio Sidecar PodMonitor"
   type        = string
   default     = <<EOT
-apiVersion: monitoring.coreos.com/v1
-kind: PodMonitor
-metadata:
-  name: istio-sidecars-monitor
-  namespace: env-dev
-  labels:
-    monitoring: dev-stack
-    release: kube-prometheus-stack
 spec:
   selector:
     matchExpressions:
@@ -261,5 +253,17 @@ spec:
       replacement: $1:$2
       sourceLabels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
       targetLabel: __address__
+EOT  
+}
+variable "istio_sidecar_peerauthentication_config" {
+  description = "YAML configuration for Istio Sidecar PeerAuthentication"
+  type        = string
+  default     = <<EOT
+spec:
+  mtls:
+    mode: STRICT
+  portLevelMtls:
+    15020:
+      mode: PERMISSIVE
 EOT
 }
