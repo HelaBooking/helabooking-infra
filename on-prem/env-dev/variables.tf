@@ -266,9 +266,17 @@ spec:
   mtls:
     mode: STRICT
   portLevelMtls:
+    # Disable mtls for Istio pod metrics scraping
     15020:
       mode: PERMISSIVE
+    # Disable mtls for Prometheus scraping
     9090:
+      mode: PERMISSIVE
+    8080:
+      mode: PERMISSIVE
+    9093:
+      mode: PERMISSIVE
+    10250:
       mode: PERMISSIVE
 EOT
 }
