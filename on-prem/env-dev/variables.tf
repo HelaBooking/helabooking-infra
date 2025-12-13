@@ -56,7 +56,7 @@ variable "enable_prometheus" {
 variable "enable_grafana" {
   description = "Enable Grafana"
   type        = bool
-  default     = false
+  default     = true
 }
 variable "enable_pgadmin" {
   description = "Enable PGAdmin deployment"
