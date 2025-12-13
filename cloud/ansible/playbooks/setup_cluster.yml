@@ -18,6 +18,10 @@
         url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
         dest: /tmp/get_helm.sh
         mode: '0700'
+      register: result
+      until: result is succeeded
+      retries: 5
+      delay: 10
 
     - name: Install Helm
       command: /tmp/get_helm.sh
@@ -30,14 +34,26 @@
     - name: Add Cilium Helm repo
       command: helm repo add cilium https://helm.cilium.io/
       changed_when: false
+      register: result
+      until: result.rc == 0
+      retries: 5
+      delay: 5
 
     - name: Add ArgoCD Helm repo
       command: helm repo add argo https://argoproj.github.io/argo-helm
       changed_when: false
+      register: result
+      until: result.rc == 0
+      retries: 5
+      delay: 5
 
     - name: Update Helm repos
       command: helm repo update
       changed_when: false
+      register: result
+      until: result.rc == 0
+      retries: 5
+      delay: 5
 
     # -------------------------------------------------------------------------
     # 3. Install Cilium
