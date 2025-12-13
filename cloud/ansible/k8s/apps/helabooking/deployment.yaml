@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helabooking-app
+  namespace: default
+  labels:
+    app: helabooking
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: helabooking
+  template:
+    metadata:
+      labels:
+        app: helabooking
+    spec:
+      containers:
+        - name: app
+          image: nginx:latest # Placeholder image
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "250m"

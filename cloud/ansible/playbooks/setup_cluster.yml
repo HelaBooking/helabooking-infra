@@ -75,3 +75,17 @@
         --set server.service.type=LoadBalancer
       register: argocd_install
       changed_when: "'Release \"argocd\" does not exist. Installing it now.' in argocd_install.stdout"
+
+    # -------------------------------------------------------------------------
+    # 5. Bootstrap Application (Initial Deploy)
+    # -------------------------------------------------------------------------
+    - name: Copy ArgoCD Application Manifest
+      copy:
+        src: ../k8s/argocd/application.yaml
+        dest: /tmp/application.yaml
+        mode: '0644'
+
+    - name: Apply ArgoCD Application
+      command: kubectl apply -f /tmp/application.yaml
+      register: app_deploy
+      changed_when: "'created' in app_deploy.stdout or 'configured' in app_deploy.stdout"
