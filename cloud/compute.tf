@@ -60,7 +60,7 @@ resource "aws_instance" "master" {
 
   user_data = <<-EOF
               #!/bin/bash
-              curl -sfL https://get.k3s.io | K3S_TOKEN=${random_password.k3s_token.result} sh -s - server --cluster-init
+              curl -sfL https://get.k3s.io | K3S_TOKEN=${random_password.k3s_token.result} sh -s - server --cluster-init --flannel-backend=none --disable-network-policy
               EOF
 }
 
