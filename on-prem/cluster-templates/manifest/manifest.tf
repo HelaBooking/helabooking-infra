@@ -6,10 +6,12 @@ resource "kubernetes_manifest" "manifest_template" {
       "apiVersion" = var.api_version
       "kind"       = var.kind
       "metadata" = {
-        "name"        = var.metadata.name
-        "namespace"   = try(var.metadata.namespace, null)
-        "labels"      = try(var.metadata.labels, null)
-        "annotations" = try(var.metadata.annotations, null)
+        for k, v in {
+          "name"        = var.metadata.name
+          "namespace"   = try(var.metadata.namespace, null)
+          "labels"      = try(var.metadata.labels, null)
+          "annotations" = try(var.metadata.annotations, null)
+        } : k => v if v != null
       }
     },
     # This parses the "spec" or "data" block you pass as a string

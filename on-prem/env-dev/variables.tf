@@ -233,7 +233,6 @@ spec:
     matchNames:
     - env-dev
     - istio-system
-    - management
   podMetricsEndpoints:
   - path: /stats/prometheus
     interval: 15s
@@ -269,18 +268,11 @@ spec:
     # Disable mtls for Istio pod metrics scraping
     15020:
       mode: PERMISSIVE
-    # Disable mtls for Prometheus scraping
+    # Disable mtls for OpenSearch log ingestion
+    9200:
+      mode: PERMISSIVE
+    # Disable mtls for Prometheus access for other namespaces
     9090:
-      mode: PERMISSIVE
-    8080:
-      mode: PERMISSIVE
-    9093:
-      mode: PERMISSIVE
-    10250:
-      mode: PERMISSIVE
-    5601:
-      mode: PERMISSIVE
-    80:
       mode: PERMISSIVE
 EOT
 }
