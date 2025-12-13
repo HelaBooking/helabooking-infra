@@ -21,6 +21,24 @@ resource "aws_security_group" "k3s" {
     description = "Allow K8s API"
   }
 
+  # HTTP Access (Traefik Ingress)
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTP"
+  }
+
+  # HTTPS Access (Traefik Ingress)
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTPS"
+  }
+
   # Internal communication (VXLAN, etc)
   ingress {
     from_port = 0
