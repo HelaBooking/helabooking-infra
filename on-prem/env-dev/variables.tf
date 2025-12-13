@@ -265,6 +265,9 @@ spec:
   mtls:
     mode: STRICT
   portLevelMtls:
+    # Disable mTLS for Grafana (Fixes 502 error)
+    3000:
+      mode: PERMISSIVE
     # Disable mTLS for OpenSearch Dashboards UI (Fixes 502 error)
     5601:
       mode: PERMISSIVE
