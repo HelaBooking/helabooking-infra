@@ -66,7 +66,7 @@ variable "enable_pgadmin" {
 variable "enable_kiali_dashboard" {
   description = "Enable Kiali Dashboard deployment"
   type        = bool
-  default     = false
+  default     = true
 }
 
 
