@@ -170,9 +170,9 @@ module "kube_prometheus_stack_helm" {
     { name = "grafana.resources.limits.cpu", value = "500m" },
     { name = "grafana.resources.limits.memory", value = "1Gi" },
     # Storage specs
-    { name = "prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage", value = "5Gi" },
+    { name = "prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage", value = "10Gi" },
     { name = "prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName", value = "longhorn" },
-    { name = "alertmanager.alertmanagerSpec.storage.volumeClaimTemplate.spec.resources.requests.storage", value = "2Gi" },
+    { name = "alertmanager.alertmanagerSpec.storage.volumeClaimTemplate.spec.resources.requests.storage", value = "500Mi" },
     { name = "alertmanager.alertmanagerSpec.storage.volumeClaimTemplate.spec.storageClassName", value = "longhorn" }
   ]
   depends_on = [kubernetes_namespace.env_dev]

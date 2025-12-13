@@ -12,7 +12,7 @@ module "rabbitmq_data_pvc" {
   namespace           = var.namespace
   app_selector        = "rabbitmq"
   access_modes        = ["ReadWriteMany"]
-  storage_request     = "1Gi"
+  storage_request     = "500Mi"
   depends_on_resource = [kubernetes_namespace.env_dev]
 }
 

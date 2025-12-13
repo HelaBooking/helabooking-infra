@@ -129,7 +129,7 @@ grafana:
     type: statefulset
     storageClassName: longhorn
     accessModes: ["ReadWriteOnce"]
-    size: 2Gi
+    size: 1Gi
 
   # FIX: Manually define the Data Source to ensure connection
   additionalDataSources:
