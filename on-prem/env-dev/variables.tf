@@ -231,6 +231,7 @@ metadata:
   namespace: env-dev
   labels:
     monitoring: dev-stack
+    release: kube-prometheus-stack
 spec:
   selector:
     matchExpressions:
