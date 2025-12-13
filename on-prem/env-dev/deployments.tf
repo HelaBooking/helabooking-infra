@@ -100,6 +100,7 @@ module "opensearch_helm" {
     { name = "nodeGroup", value = "master" },
     { name = "replicas", value = "1" },
     { name = "minimumMasterNodes", value = "1" },
+    { name = "service.httpPortName", value = "https" },
     # Resource specifications
     { name = "nodeSelector.kubernetes\\.io/hostname", value = "pico-node" },
     { name = "persistence.enabled", value = "true" },
