@@ -261,7 +261,8 @@ variable "istio_sidecar_peerauthentication_config" {
   default     = <<EOT
 spec:
   selector:
-    matchLabels: {}
+    matchLabels:
+      security.istio.io/tlsMode: istio
   mtls:
     mode: STRICT
   portLevelMtls:
