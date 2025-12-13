@@ -265,14 +265,29 @@ spec:
   mtls:
     mode: STRICT
   portLevelMtls:
-    # Disable mtls for Istio pod metrics scraping
-    15020:
+    # Disable mTLS for OpenSearch Dashboards UI (Fixes 502 error)
+    5601:
       mode: PERMISSIVE
-    # Disable mtls for OpenSearch log ingestion
+    # Disable mTLS for Kube State Metrics/Grafana & PGadmin (Fixes 503 error)
+    8080:
+      mode: PERMISSIVE
+    # Disable mTLS for Prometheus access for other namespaces (Fixes 503 error)
+    9090:
+      mode: PERMISSIVE
+    # Disable mTLS for Alertmanager (Fixes 503 error)
+    9093:
+      mode: PERMISSIVE
+    # Disable mTLS for OpenSearch log ingestion
     9200:
       mode: PERMISSIVE
-    # Disable mtls for Prometheus access for other namespaces
-    9090:
+    # Disable mTLS for Istio pod metrics scraping
+    15020:
+      mode: PERMISSIVE
+    # Disable mTLS for Kube Operator
+    10250:
+      mode: PERMISSIVE
+    # Disable mTLS for RabbitMQ Management UI (Fixes 502 error)
+    15672:
       mode: PERMISSIVE
 EOT
 }

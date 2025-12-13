@@ -168,6 +168,8 @@ module "kube_prometheus_stack_helm" {
   set_values = [
     { name = "grafana.adminPassword", value = var.grafana_admin_password },
     { name = "grafana.service.type", value = "ClusterIP" },
+    { name = "grafana.service.portName", value = "http-web" },
+    { name = "grafana.service.port", value = "8080" },
     # Enable or Disable Services
     { name = "grafana.enabled", value = tostring(var.enable_grafana) },
     { name = "prometheus.enabled", value = tostring(var.enable_prometheus) },

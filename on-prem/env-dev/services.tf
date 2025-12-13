@@ -22,7 +22,7 @@ module "pgadmin_service" {
   namespace    = var.namespace
   app_selector = "pgadmin"
   service_ports = [
-    { name = "http", value = 80, target_value = 80, protocol = "TCP" }
+    { name = "http-web", value = 8080, target_value = 80, protocol = "TCP" }
   ]
   service_type        = "ClusterIP"
   depends_on_resource = module.pgadmin_deployment
