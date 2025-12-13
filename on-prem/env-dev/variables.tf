@@ -256,9 +256,9 @@ spec:
       sourceLabels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
       targetLabel: __metrics_path__
     - action: replace
-      regex: (.*)
-      replacement: $1
-      sourceLabels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+      regex: ([^:]+)(?::\d+)?;(\d+)
+      replacement: $1:$2
+      sourceLabels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
       targetLabel: __address__
 EOT
 }
