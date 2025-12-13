@@ -37,6 +37,39 @@ variable "rabbitmq_helm_version" {
 
 
 ################################ Supporting Service Related Variables ################################
+# Enable or Disable Supporting Services
+variable "enable_opensearch" {
+  description = "Enable OpenSearch Cluster"
+  type        = bool
+  default     = true
+}
+variable "enable_opensearch_dashboard" {
+  description = "Enable OpenSearch Dashboard"
+  type        = bool
+  default     = true
+}
+variable "enable_prometheus" {
+  description = "Enable Prometheus & Alertmanager"
+  type        = bool
+  default     = true
+}
+variable "enable_grafana" {
+  description = "Enable Grafana"
+  type        = bool
+  default     = true
+}
+variable "enable_pgadmin" {
+  description = "Enable PGAdmin deployment"
+  type        = bool
+  default     = false
+}
+variable "enable_kiali_dashboard" {
+  description = "Enable Kiali Dashboard deployment"
+  type        = bool
+  default     = false
+}
+
+
 # Image/Helm Chart versions
 variable "pgadmin_image" {
   description = "Version of PGAdmin image"

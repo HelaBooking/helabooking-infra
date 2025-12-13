@@ -55,7 +55,7 @@ module "pgadmin_deployment" {
 
   app_name       = "pgadmin"
   namespace      = var.namespace
-  replicas       = 0
+  replicas       = var.enable_pgadmin ? 1 : 0 # Enable or Disable PGAdmin Deployment
   selector_label = "pgadmin"
   app_image      = "dpage/pgadmin4:${var.pgadmin_image}"
   container_ports = [
@@ -94,6 +94,7 @@ module "opensearch_helm" {
   chart            = "opensearch"
   namespace        = var.namespace
   chart_version    = var.opensearch_helm_version
+  count            = var.enable_opensearch ? 1 : 0 # Enable or Disable OpenSearch Deployment
   set_values = [
     { name = "clusterName", value = "opensearch-dev-cluster" },
     { name = "nodeGroup", value = "master" },
@@ -125,6 +126,7 @@ module "opensearch_dashboard_helm" {
   chart            = "opensearch-dashboards"
   namespace        = var.namespace
   chart_version    = var.opensearch_dashboard_helm_version
+  count            = var.enable_opensearch_dashboard && var.enable_opensearch ? 1 : 0 # Enable or Disable OpenSearch Dashboard Deployment
   set_values = [
     { name = "opensearchHosts", value = "https://opensearch-cluster-master.${var.namespace}.${var.cluster_service_domain}:9200" },
     { name = "replicaCount", value = "1" },
@@ -152,6 +154,10 @@ module "kube_prometheus_stack_helm" {
   set_values = [
     { name = "grafana.adminPassword", value = var.grafana_admin_password },
     { name = "grafana.service.type", value = "ClusterIP" },
+    # Enable or Disable Services
+    { name = "grafana.enabled", value = tostring(var.enable_grafana) },
+    { name = "prometheus.enabled", value = tostring(var.enable_prometheus) },
+    { name = "alertmanager.enabled", value = tostring(var.enable_prometheus) },
     # Resource specs
     { name = "prometheus.prometheusSpec.resources.requests.cpu", value = "200m" },
     { name = "prometheus.prometheusSpec.resources.requests.memory", value = "512Mi" },
@@ -229,7 +235,7 @@ module "kiali_helm" {
 
   set_values = [
     { name = "instance_name", value = "kiali" },
-    { name = "deployment.replicas", value = "1" }, # Scale down when not in use
+    { name = "deployment.replicas", value = var.enable_kiali_dashboard ? "1" : "0" }, # Scale down when not in use
 
     { name = "auth.strategy", value = "anonymous" }, # No authentication for dev environment
     { name = "deployment.cluster_wide_access", value = "false" },
