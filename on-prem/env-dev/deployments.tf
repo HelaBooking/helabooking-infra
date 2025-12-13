@@ -225,6 +225,12 @@ module "istio_ingress_gateway_dev_helm" {
   ]
   depends_on = [module.istiod_dev_helm]
 }
+# Deploying Istio Sidecar Monitoring for Prometheus
+resource "kubernetes_manifest" "istio_sidecar_monitoring" {
+  manifest   = yamldecode(var.istio_sidecar_monitoring_config)
+  depends_on = [module.kube_prometheus_stack_helm, kubernetes_namespace.env_dev]
+}
+
 # Deploying Kiali Dashboard
 module "kiali_helm" {
   source           = "../cluster-templates/helm-chart"

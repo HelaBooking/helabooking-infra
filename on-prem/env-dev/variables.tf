@@ -56,7 +56,7 @@ variable "enable_prometheus" {
 variable "enable_grafana" {
   description = "Enable Grafana"
   type        = bool
-  default     = true
+  default     = false
 }
 variable "enable_pgadmin" {
   description = "Enable PGAdmin deployment"
@@ -219,4 +219,45 @@ variable "istio_namespace" {
   description = "Namespace where Istio is installed"
   type        = string
   default     = "istio-system"
+}
+variable "istio_sidecar_monitoring_config" {
+  description = "Istio Sidecar Monitoring Configuration"
+  type        = string
+  default     = <<EOT
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: istio-sidecars-monitor
+  namespace: env-dev
+  labels:
+    monitoring: dev-stack
+spec:
+  selector:
+    matchExpressions:
+    - key: istio-prometheus-ignore
+      operator: DoesNotExist
+  namespaceSelector:
+    matchNames:
+    - env-dev
+    - istio-system
+  podMetricsEndpoints:
+  - path: /stats/prometheus
+    interval: 15s
+    relabelings:
+    - action: keep
+      sourceLabels: [__meta_kubernetes_pod_container_name]
+      regex: "istio-proxy"
+    - action: keep
+      sourceLabels: [__meta_kubernetes_pod_annotationpresent_prometheus_io_scrape]
+    - action: replace
+      regex: (.*)
+      replacement: $1
+      sourceLabels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+      targetLabel: __metrics_path__
+    - action: replace
+      regex: (.*)
+      replacement: $1
+      sourceLabels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+      targetLabel: __address__
+EOT
 }
