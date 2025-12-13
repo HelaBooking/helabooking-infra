@@ -241,6 +241,7 @@ spec:
     matchNames:
     - env-dev
     - istio-system
+    - management
   podMetricsEndpoints:
   - path: /stats/prometheus
     interval: 15s
