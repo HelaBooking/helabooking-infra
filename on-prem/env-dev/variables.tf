@@ -268,5 +268,7 @@ spec:
   portLevelMtls:
     15020:
       mode: PERMISSIVE
+    9090:
+      mode: PERMISSIVE
 EOT
 }
