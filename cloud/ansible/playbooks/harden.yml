@@ -17,6 +17,8 @@
           - curl
           - git
           - unzip
+          - tar
+
         state: present
 
     - name: Ensure fail2ban is running

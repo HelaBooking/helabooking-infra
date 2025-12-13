@@ -1,5 +1,7 @@
 ---
 - import_playbook: harden.yml
+- import_playbook: setup_cluster.yml
+
 
 - name: Post-Provisioning Configuration
   hosts: master
