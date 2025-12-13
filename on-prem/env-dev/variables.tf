@@ -278,5 +278,9 @@ spec:
       mode: PERMISSIVE
     10250:
       mode: PERMISSIVE
+    5601:
+      mode: PERMISSIVE
+    80:
+      mode: PERMISSIVE
 EOT
 }
