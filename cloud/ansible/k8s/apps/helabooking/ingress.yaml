@@ -3,9 +3,9 @@ kind: Ingress
 metadata:
   name: helabooking-ingress
   namespace: default
-  annotations:
-    kubernetes.io/ingress.class: traefik
+  namespace: default
 spec:
+  ingressClassName: traefik
   rules:
     - host: staging.helabooking.com # Placeholder host
       http:
