@@ -13,9 +13,9 @@
     # -------------------------------------------------------------------------
     # 1. Install Helm
     # -------------------------------------------------------------------------
-    - name: Check DNS (Debug)
-      command: cat /etc/resolv.conf
-      changed_when: false
+    - name: Force Google DNS
+      shell: "echo 'nameserver 8.8.8.8' > /etc/resolv.conf"
+      become: yes
 
     - name: Download Helm install script
       shell: curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 -o /tmp/get_helm.sh
