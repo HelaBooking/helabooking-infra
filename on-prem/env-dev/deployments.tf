@@ -246,6 +246,8 @@ module "kiali_helm" {
     { name = "external_services.prometheus.url", value = "http://prometheus-dev-prometheus.env-dev.svc.cluster.local:9090" },
     { name = "server.port", value = "20001" },
     { name = "server.web_root", value = "/" },
+    { name = "external_services.grafana.url", value = module.grafana_dns.cf_dns_record_name },
+    { name = "external_services.grafana.in_cluster_url", value = "http://kube-prometheus-stack-grafana.env-dev.svc.cluster.local:80" },
 
     # Resource specifications
     { name = "deployment.resources.requests.cpu", value = "50m" },
