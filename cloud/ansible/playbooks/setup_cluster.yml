@@ -106,3 +106,17 @@
       command: kubectl apply -f /tmp/application.yaml
       register: app_deploy
       changed_when: "'created' in app_deploy.stdout or 'configured' in app_deploy.stdout"
+
+    # -------------------------------------------------------------------------
+    # 6. Bootstrap Infrastructure Apps (RabbitMQ, Redis)
+    # -------------------------------------------------------------------------
+    - name: Copy Infra Bootstrap Manifest
+      copy:
+        src: ../k8s/argocd/infra-bootstrap.yaml
+        dest: /tmp/infra-bootstrap.yaml
+        mode: '0644'
+
+    - name: Apply Infra Bootstrap
+      command: kubectl apply -f /tmp/infra-bootstrap.yaml
+      register: infra_deploy
+      changed_when: "'created' in infra_deploy.stdout or 'configured' in infra_deploy.stdout"

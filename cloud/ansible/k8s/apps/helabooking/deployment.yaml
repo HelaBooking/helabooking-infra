@@ -17,7 +17,22 @@ spec:
     spec:
       containers:
         - name: app
-          image: nginx:latest # Placeholder image
+          image: nginx:latest # TODO: Replace with your actual microservice image (e.g. helabooking/app:latest)
+          env:
+            - name: RABBITMQ_HOST
+              value: "rabbitmq.default.svc.cluster.local"
+            - name: RABBITMQ_PORT
+              value: "5672"
+            - name: RABBITMQ_USERNAME
+              value: "user"
+            - name: RABBITMQ_PASSWORD
+              value: "password"
+            - name: REDIS_HOST
+              value: "redis-master.default.svc.cluster.local"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_PASSWORD
+              value: "password"
           ports:
             - containerPort: 80
           resources:
