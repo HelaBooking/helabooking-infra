@@ -30,7 +30,7 @@ module "podmonitor_istio_sidecar" {
     }
   }
   manifest_body       = var.istio_sidecar_monitoring_config
-  depends_on_resource = [module.kube_prometheus_stack_helm]
+  depends_on_resource = [module.kube_prometheus_stack_helm, module.istiod_dev_helm]
 }
 
 # Deploying PeerAuthentication to allow Istio Sidecar Metrics Scraping

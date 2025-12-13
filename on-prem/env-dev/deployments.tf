@@ -34,7 +34,14 @@ module "rabbitmq_helm" {
     { name = "podLabels.app", value = "rabbitmq" },
     { name = "service.type", value = "ClusterIP" },
     { name = "service.ports.amqp", value = "5672" },
-    { name = "service.ports.management", value = "15672" },
+    { name = "service.ports.manager", value = "15672" },
+    # Renaming Ports for Istio
+    { name = "service.portNames.amqp", value = "tcp-amqp" },
+    { name = "service.portNames.amqpTls", value = "tcp-amqpTls" },
+    { name = "service.portNames.dist", value = "http-dist" },
+    { name = "service.portNames.manager", value = "http-stats" },
+    { name = "service.portNames.metrics", value = "tcp-metrics" },
+    { name = "service.portNames.epmd", value = "tcp-epmd" },
     # Resource specifications
     { name = "resources.limits.memory", value = "512Mi" },
     { name = "resources.limits.cpu", value = "500m" },
@@ -100,7 +107,10 @@ module "opensearch_helm" {
     { name = "nodeGroup", value = "master" },
     { name = "replicas", value = "1" },
     { name = "minimumMasterNodes", value = "1" },
+    # Ports renames for istio
     { name = "service.httpPortName", value = "https" },
+    { name = "service.transportPortName", value = "tcp-transport" },
+    { name = "service.metricsPortName", value = "tcp-metrics" },
     # Resource specifications
     { name = "nodeSelector.kubernetes\\.io/hostname", value = "pico-node" },
     { name = "persistence.enabled", value = "true" },
@@ -131,6 +141,9 @@ module "opensearch_dashboard_helm" {
   set_values = [
     { name = "opensearchHosts", value = "https://opensearch-cluster-master.${var.namespace}.${var.cluster_service_domain}:9200" },
     { name = "replicaCount", value = "1" },
+    # Ports renames for istio
+    { name = "service.httpPortName", value = "http" },
+    { name = "service.metricsPortName", value = "tcp-metrics" },
     # Resource specifications
     { name = "nodeSelector.kubernetes\\.io/hostname", value = "pico-node" },
     { name = "resources.requests.cpu", value = "250m" },
