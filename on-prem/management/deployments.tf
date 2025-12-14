@@ -8,10 +8,11 @@
 # Deploying Project Common Resources:
 # + Jenkins + Trivy (Vulnerability Scanning)
 # + Harbor
-# - ArgoCD
-# - Fluent Bit
-# - Hashicorp Vault
+# + ArgoCD
+# + Fluent Bit
+# + Istio Base Components
 
+# - Hashicorp Vault
 # - WSO2 Identity Server (Optional)
 # - Ansible (Outside of cluster)
 
@@ -23,7 +24,7 @@ module "traefik_helm" {
   source = "../cluster-templates/helm-chart"
 
   chart_name       = "traefik"
-  chart_repository = "https://helm.traefik.io/traefik"
+  chart_repository = "https://traefik.github.io/charts"
   chart            = "traefik"
   namespace        = kubernetes_namespace.management.metadata[0].name
   chart_version    = var.traefik_version
@@ -33,8 +34,10 @@ module "traefik_helm" {
     { name = "ports.websecure.port", value = "443" },
     { name = "ports.web.port", value = "80" },
     { name = "service.type", value = "ClusterIP" },
+    { name = "providers.kubernetesIngress.publishedService.enabled", value = "true" },
+    { name = "providers.kubernetesIngress.publishedService.pathOverride", value = "management/traefik" },
     { name = "replicas", value = "1" },
-    { name = "resources.requests.cpu", value = "100m" },
+    { name = "resources.requests.cpu", value = "50m" },
     { name = "resources.requests.memory", value = "50Mi" }
   ]
   depends_on_resource = kubernetes_namespace.management
@@ -54,7 +57,7 @@ module "cert_manager_helm" {
     { name = "replicaCount", value = "1" },
     { name = "resources.limits.cpu", value = "400m" },
     { name = "resources.limits.memory", value = "256Mi" },
-    { name = "resources.requests.cpu", value = "100m" },
+    { name = "resources.requests.cpu", value = "50m" },
     { name = "resources.requests.memory", value = "100Mi" }
   ]
   depends_on_resource = [kubernetes_namespace.cert_manager, module.traefik_helm]
@@ -94,7 +97,7 @@ module "longhorn_helm" {
     { name = "csi.resizerReplicaCount", value = "1" },
     { name = "csi.snapshotterReplicaCount", value = "1" },
     { name = "longhornUI.replicas", value = "1" },
-    { name = "resources.requests.cpu", value = "200m" },
+    { name = "resources.requests.cpu", value = "100m" },
     { name = "resources.requests.memory", value = "128Mi" },
 
     # prevent Helm from creating its own StorageClass
@@ -151,7 +154,7 @@ module "nginx_proxy_deployment" {
       value = 443
     }
   ]
-  cpu_request    = "150m"
+  cpu_request    = "100m"
   memory_request = "128Mi"
   volume_configs = [
     {
@@ -179,34 +182,31 @@ module "jenkins_helm" {
   chart            = "jenkins"
   namespace        = kubernetes_namespace.management.metadata[0].name
   chart_version    = var.jenkins_version
+  # Custom Values
+  custom_values = var.jenkins_agent_config
+
   set_values = [
     { name = "controller.admin.password", value = var.jenkins_admin_password },
     { name = "controller.serviceType", value = "ClusterIP" },
-    { name = "controller.resources.limits.cpu", value = "1500m" },
+    { name = "controller.resources.limits.cpu", value = "1000m" },
     { name = "controller.resources.limits.memory", value = "2Gi" },
     { name = "persistence.existingClaim", value = "jenkins-pvc" },
+    { name = "controller.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_controller_node_selector_hostname },
     { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
-    # Agent configs
-    { name = "agent.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_agent_node_selector_hostname },
-    { name = "agent.podName", value = "jenkins-agent" },
-    { name = "agent.idleMinutes", value = "10080" }, # 7 days
-    { name = "agent.hostNetworking", value = "false" },
-    { name = "agent.privileged", value = "true" },
-    { name = "agent.runAsUser", value = "0" },
-    { name = "agent.runAsGroup", value = "0" },
-    { name = "agent.resources.limits.cpu", value = "1000m" },
-    { name = "agent.resources.limits.memory", value = "1Gi" },
+    # Agent configs - Defined in the custom_values variable
     # Plugins
     {
       name = "controller.additionalPlugins",
       value_list = [
         "github-branch-source:1917.v9ee8a_39b_3d0d",
-        "ansicolor:1.0.6"
+        "ansicolor:1.0.6",
+        "generic-webhook-trigger:2.4.1"
       ]
     },
     # Config as Code (JCasC) scripts
     { name = "controller.JCasC.configScripts.git-creds", value = var.jenkins_git_credentials },
     { name = "controller.JCasC.configScripts.aws-creds", value = var.jenkins_aws_credentials },
+    { name = "controller.JCasC.configScripts.harbor-creds", value = var.harbor_credentials }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.longhorn_helm, module.jenkins_pvc]
 }
@@ -247,4 +247,63 @@ module "harbor_helm" {
     { name = "resources.limits.memory", value = "1Gi" }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.cert_manager_helm, module.longhorn_helm, module.harbor_registry_pvc, module.harbor_database_pvc, module.harbor_jobservice_pvc, module.harbor_redis_pvc, module.harbor_trivy_pvc]
+}
+
+# Deploying ArgoCD
+module "argocd_helm" {
+  source = "../cluster-templates/helm-chart"
+
+  chart_name       = "argo-cd"
+  chart_repository = "https://argoproj.github.io/argo-helm"
+  chart            = "argo-cd"
+  namespace        = kubernetes_namespace.management.metadata[0].name
+  chart_version    = var.argocd_version
+  set_values = [
+    { name = "global.domain", value = "argocd.${var.cf_default_root_domain}" },
+    { name = "server.ingress.enabled", value = "false" },
+    { name = "configs.secret.argocdServerAdminPassword", value = var.argocd_admin_password_hash },
+    { name = "server.resources.requests.cpu", value = "100m" },
+    { name = "server.resources.requests.memory", value = "256Mi" },
+    # Forces ArgoCD to mark Ingress as "Healthy" even without an IP address
+    {
+      name  = "configs.cm.resource\\.customizations\\.health\\.networking\\.k8s\\.io_Ingress"
+      value = "hs = {}\nhs.status = \"Healthy\"\nhs.message = \"Ingress is Healthy (IP check bypassed for ClusterIP)\"\nreturn hs"
+    }
+  ]
+  depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.cert_manager_helm]
+}
+
+# Deploying Fluent Bit
+module "fluentbit_helm" {
+  source = "../cluster-templates/helm-chart"
+
+  chart_name       = "fluent-bit"
+  chart_repository = "https://fluent.github.io/helm-charts"
+  chart            = "fluent-bit"
+  namespace        = kubernetes_namespace.management.metadata[0].name
+  chart_version    = var.fluentbit_version
+
+  set_values = [
+    { name = "resources.requests.cpu", value = "50m" },
+    { name = "resources.requests.memory", value = "64Mi" },
+    { name = "resources.limits.cpu", value = "200m" },
+    { name = "resources.limits.memory", value = "128Mi" },
+    { name = "config.service", value = var.fluentbit_config_service },
+    { name = "config.inputs", value = var.fluentbit_config_inputs },
+    { name = "config.filters", value = var.fluentbit_config_filters },
+    { name = "config.outputs", value = var.fluentbit_config_outputs }
+  ]
+  depends_on_resource = [kubernetes_namespace.management, module.traefik_helm]
+}
+
+# Deploying Istio Base Chart
+module "istio_base_helm" {
+  source           = "../cluster-templates/helm-chart"
+  chart_name       = "istio-base"
+  chart_repository = "https://istio-release.storage.googleapis.com/charts"
+  chart            = "base"
+  namespace        = kubernetes_namespace.istio_system.metadata[0].name
+  chart_version    = var.istio_base_helm_version
+
+  depends_on = [kubernetes_namespace.istio_system]
 }

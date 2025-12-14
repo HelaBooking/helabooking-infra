@@ -6,6 +6,9 @@ resource "helm_release" "helm_chart_template" {
   namespace  = var.namespace
   version    = var.chart_version
 
+  values = [
+    var.custom_values
+  ]
   dynamic "set" {
     for_each = {
       for item in var.set_values : item.name => item if lookup(item, "value_list", null) == null
