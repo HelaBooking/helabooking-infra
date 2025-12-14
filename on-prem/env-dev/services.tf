@@ -12,7 +12,7 @@
 # + PGAdmin Service
 # + Grafana Service & Prometheus Service (managed by Operator)
 # + OpenSearch Service & OpenSearch Dashboard Service (managed by helm)
-# - Istio (Related Services)
+# + Istio (Related Services) (Managed by helm)
 
 # Deploying PGAdmin Service
 module "pgadmin_service" {
