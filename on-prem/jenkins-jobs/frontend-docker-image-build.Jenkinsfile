@@ -1,31 +1,29 @@
 // Global variables
 def skipBuild = false
-def allServices = ["user-service", "event-service", "booking-service", "ticketing-service", "notification-service", "audit-service"]
+// Define the name of the frontend app (used for image naming)
+def appName = "frontend" 
 def servicesToBuild = []
 def imageTag = ""
 def buildResults = []
 
 // --- TRIGGER CONFIGURATION ---
-def targetRepo = "helabooking-backend"                  // trigger repo name
-def allowedBranchesTriggers = ["dev", "qa"]             // branches allowed to trigger this pipeline
+def targetRepo = "helabooking-frontend"                 // GitHub Repo Name
+def allowedBranchesTriggers = ["dev", "qa"]             // Branches allowed to trigger
 
 // Apply Trigger ONLY if the current branch is in the allowed list
 if (allowedBranchesTriggers.contains(env.BRANCH_NAME)) {
     properties([
         pipelineTriggers([
             [$class: 'GenericTrigger',
-            // Extract variables from the GitHub JSON Payload
             genericVariables: [
                 [key: 'REPO_NAME', value: '$.repository.name'],
                 [key: 'REF', value: '$.ref']
             ],
-            token: 'backend-trigger',
+            token: 'frontend-trigger',
             printContributedVariables: true,
             printPostContent: false,
             
-            // The Filter:
-            // This constructs a string like "helabooking-backend refs/heads/dev" and checks if it matches the Regex.
-            // It ensures this pipeline ONLY runs if the webhook comes from the backend repo and the branch matches the current pipeline branch.
+            // Trigger if Repo Name matches AND Branch matches this pipeline's branch
             regexpFilterText: '$REPO_NAME $REF',
             regexpFilterExpression: "^${targetRepo} refs/heads/${env.BRANCH_NAME}\$" 
             ]
@@ -41,35 +39,37 @@ pipeline {
         REGISTRY_HOSTNAME = "harbor.management.ezbooking.lk"
         REGISTRY = "harbor.management.ezbooking.lk/helabooking"
         HARBOR_AUTH = credentials('harbor-credentials')
+        
         // Git ENVs
         GIT_AUTH = credentials('git-org-credentials')
-        BACKEND_REPO = "github.com/HelaBooking/helabooking-backend.git"
+        FRONTEND_REPO = "github.com/HelaBooking/helabooking-frontend.git" 
         MANIFEST_REPO = "github.com/HelaBooking/helabooking-manifests.git"
         // BuildKit Container Name
         BUILDKIT_CONTAINER = "buildkit"
+        
         // Paths
         AGENT_HOME = "/home/jenkins/agent"
-        WORKSPACE_DIR = "${AGENT_HOME}/workspace/image-build"
+        WORKSPACE_DIR = "${AGENT_HOME}/workspace/frontend-image-build"
     }
 
     stages {
-        stage('Clone Backend Services Repo') {
+        stage('Clone Frontend Repo') {
             steps {
                 ansiColor('xterm') {
                     sh """
-                        echo "\033[1;34m> 📁 Preparing backend repo folder...\033[0m"
+                        echo "\033[1;34m> 📁 Preparing frontend repo folder...\033[0m"
                         if [ ! -d "${WORKSPACE_DIR}" ]; then
                             mkdir -p ${WORKSPACE_DIR}
                         fi
                         cd ${WORKSPACE_DIR}
 
-                        if [ ! -d "backend" ]; then
-                            echo "\033[1;34m> ⬇️ Cloning backend repo...\033[0m"
-                            git clone https://${GIT_AUTH_USR}:${GIT_AUTH_PSW}@${BACKEND_REPO} backend
-                            cd backend
+                        if [ ! -d "frontend" ]; then
+                            echo "\033[1;34m> ⬇️ Cloning frontend repo...\033[0m"
+                            git clone https://${GIT_AUTH_USR}:${GIT_AUTH_PSW}@${FRONTEND_REPO} frontend
+                            cd frontend
                         else
-                            echo "\033[1;34m> 🔄 Backend folder exists → pulling latest...\033[0m"
-                            cd backend
+                            echo "\033[1;34m> 🔄 Frontend folder exists → pulling latest...\033[0m"
+                            cd frontend
                             git reset --hard
                             git fetch --all
                         fi
@@ -85,11 +85,11 @@ pipeline {
             steps {
                 script {
                     ansiColor('xterm') {
-                        sh "cd ${WORKSPACE_DIR}/backend && git fetch --prune"
+                        sh "cd ${WORKSPACE_DIR}/frontend && git fetch --prune"
 
-                        // 1. Identify Changed Services via Git
+                        // Detect changed files
                         def changes = sh(
-                            script: "cd ${WORKSPACE_DIR}/backend && git diff --name-only HEAD~1 HEAD",
+                            script: "cd ${WORKSPACE_DIR}/frontend && git diff --name-only HEAD~1 HEAD",
                             returnStdout: true
                         ).trim().split("\n")
 
@@ -100,22 +100,16 @@ pipeline {
                         skipBuild = false
                         imageTag = ""
                         buildResults = []
-
-                        def commonChanged = changes.any { it.startsWith("common/") }
-                        def rootPomChanged = changes.contains("pom.xml")
                         def initialList = []
 
-                        if (commonChanged || rootPomChanged) {
-                            initialList = allServices
-                        } else {
-                            initialList = allServices.findAll { svc ->
-                                changes.any { it.startsWith("${svc}/") }
-                            }
+                        // Logic: If ANY file changed, we consider the app for building
+                        if (changes.length > 0) {
+                            initialList.add(appName)
                         }
 
-                        // 2. Calculate Tag
+                        // Tag based on branch
                         def shortCommit = sh(
-                            script: "cd ${WORKSPACE_DIR}/backend && git rev-parse --short HEAD",
+                            script: "cd ${WORKSPACE_DIR}/frontend && git rev-parse --short HEAD",
                             returnStdout: true
                         ).trim()
 
@@ -127,12 +121,12 @@ pipeline {
                         }
 
                         if (initialList.isEmpty()) {
-                            echo "\033[1;33mNo service changes detected.\033[0m"
+                            echo "\033[1;33mNo changes detected.\033[0m"
                             skipBuild = true
                         } else {
                             echo "\033[1;34m> 🔍 Checking Registry for existing images for tag: ${imageTag}...\033[0m"
                             
-                            // Check Registry for Existing Images
+                            // Check Registry for Existing Images (Idempotency Check)
                             withCredentials([
                                 usernamePassword(
                                     credentialsId: 'harbor-credentials',
@@ -140,15 +134,15 @@ pipeline {
                                     passwordVariable: 'HARBOR_PASS'
                                 )
                             ]) {
-                                // Generate BuildKit Config (needed for build stage)
                                 sh '''
                                     mkdir -p $AGENT_HOME/.docker
                                     echo "{\\"auths\\":{\\"$REGISTRY\\":{\\"username\\":\\"$HARBOR_USER\\",\\"password\\":\\"$HARBOR_PASS\\"}}}" > $AGENT_HOME/.docker/config.json
                                 '''
-                                // Check each service image via Harbor V2 API
+
                                 initialList.each { svc ->
-                                    // Harbor V2 API URL: https://<host>/v2/<project>/<repo>/manifests/<tag>
+                                    // Construct API URL for "helabooking/frontend"
                                     def apiUrl = "https://${REGISTRY_HOSTNAME}/v2/helabooking/${svc}/manifests/${imageTag}"
+
                                     withEnv(["CHECK_URL=${apiUrl}"]) {
                                         def exists = sh(
                                             script: 'curl -k -I -f -u "$HARBOR_USER:$HARBOR_PASS" "$CHECK_URL" > /dev/null 2>&1',
@@ -157,7 +151,6 @@ pipeline {
 
                                         if (exists) {
                                             echo "\033[1;33m> ⏭️  Skipping ${svc} (Image ${imageTag} found in registry via API)\033[0m"
-                                    // Add to results as "SKIPPED" for the final report
                                             buildResults.add([
                                                 service: svc,
                                                 tag: imageTag,
@@ -172,28 +165,27 @@ pipeline {
                                 }
                             }
                         }
-
-                        // 4. Final Decision
+                        
+                        // Final Decision
                         if (servicesToBuild.isEmpty()) {
-                            echo "\033[1;33mAll changed services already exist in registry. Nothing to build.\033[0m"
+                            echo "\033[1;33mImage already exists in registry. Nothing to build.\033[0m"
                             skipBuild = true
                         } else {
-                            echo "\033[1;36mFinal list to build: ${servicesToBuild}\033[0m"
-                            skipBuild = false 
+                            echo "\033[1;36mBuilding: ${servicesToBuild}\033[0m"
+                            skipBuild = false
                         }
                     }
                 }
             }
         }
 
-        stage('Build & Push Images') {
+        stage('Build & Push Image') {
             when { expression { return !skipBuild } }
             steps {
                 ansiColor('xterm') {
                     script {
-                        // Auth file is already created in the previous stage, 
-                        // but we ensure the env is passed.
-                        // Iterate and Build
+                        // Auth file created in previous stage
+                        
                         servicesToBuild.each { svc ->
                             def startTime = System.currentTimeMillis()
                             def metadataFileName = "metadata-${svc}.json"
@@ -202,11 +194,12 @@ pipeline {
 
                             container("${BUILDKIT_CONTAINER}") {
                                 withEnv(["DOCKER_CONFIG=${AGENT_HOME}/.docker"]) {
+                                    // Note: Context is the ROOT of the frontend folder
                                     sh """
                                         buildctl build \
                                             --frontend=dockerfile.v0 \
-                                            --local context=${WORKSPACE_DIR}/backend \
-                                            --local dockerfile=${WORKSPACE_DIR}/backend/${svc} \
+                                            --local context=${WORKSPACE_DIR}/frontend \
+                                            --local dockerfile=${WORKSPACE_DIR}/frontend \
                                             --output type=image,registry.insecure=true,name=${REGISTRY}/${svc}:${imageTag},push=true \
                                             --import-cache type=registry,ref=${REGISTRY}/${svc}:cache \
                                             --export-cache type=registry,ref=${REGISTRY}/${svc}:cache,mode=max \
@@ -217,7 +210,7 @@ pipeline {
                             
                             def duration = (System.currentTimeMillis() - startTime) / 1000
                             
-                            // Manual JSON Parsing for summary
+                            // Manual JSON Parsing (Digest extraction)
                             def digest = "unknown"
                             if (fileExists(metadataFileName)) {
                                 def fileContent = readFile(file: metadataFileName)
@@ -262,9 +255,9 @@ pipeline {
                         
                         dir(manifestDir) {
                             sh "git clone https://${GIT_AUTH_USR}:${GIT_AUTH_PSW}@${MANIFEST_REPO} ."
-                            sh "git checkout main" // Assuming manifests are on main branch
+                            sh "git checkout main" 
                             
-                            // Configure Git for this commit
+                            // Configure Git
                             sh """
                                 git config user.email "devjenkins@helabooking.com"
                                 git config user.name "Jenkins Dev Bot"
@@ -272,7 +265,7 @@ pipeline {
                             
                             // 3. Update Images using Kustomize
                             dir(overlayPath) {
-                                // Ensure kustomize exists (download if missing)
+                                // Ensure kustomize exists
                                 sh '''
                                     if ! command -v kustomize &> /dev/null; then
                                         curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
@@ -280,21 +273,21 @@ pipeline {
                                     fi
                                 '''
                                 
-                                servicesToBuild.each { svc ->
-                                    // Syntax: placeholder_name=actual_image:tag
-                                    def placeholder = "helabooking/${svc}"
-                                    def newImage = "${REGISTRY}/${svc}:${imageTag}"
-                                    
-                                    echo "   - Updating ${svc} to ${imageTag}"
-                                    sh "kustomize edit set image ${placeholder}=${newImage}"
-                                }
+                                // Update the specific frontend image
+                                // Placeholder: helabooking/frontend
+                                // New Image: harbor.../helabooking/frontend:dev-12345
+                                def placeholder = "helabooking/${appName}"
+                                def newImage = "${REGISTRY}/${appName}:${imageTag}"
+                                
+                                echo "   - Updating ${appName} to ${imageTag}"
+                                sh "kustomize edit set image ${placeholder}=${newImage}"
                             }
                             
                             // 4. Commit and Push
                             sh """
                                 git add ${overlayPath}/kustomization.yaml
                                 if ! git diff-index --quiet HEAD; then
-                                    git commit -m "deploy(${env.BRANCH_NAME}): Update (${servicesToBuild.join(', ')}) images to ${imageTag}"
+                                    git commit -m "deploy(${env.BRANCH_NAME}): Update frontend image to ${imageTag}"
                                     git push origin main
                                     echo "\033[1;32m> ✅ Manifests updated and pushed.\033[0m"
                                 else
@@ -312,7 +305,6 @@ pipeline {
         always {
             ansiColor('xterm') {
                 script {
-                    // Always print summary if we have results (even if some were skipped)
                     if (!buildResults.isEmpty()) {
                         printSummary(buildResults)
                     }
@@ -327,7 +319,7 @@ pipeline {
 def printHeader(serviceName, tag) {
     echo """
 \033[1;36m================================================================================
-  🔨 BUILDING SERVICE: ${serviceName}
+  🔨 BUILDING APP: ${serviceName}
   🏷️  TAG: ${tag}
 ================================================================================\033[0m
 """
@@ -338,11 +330,11 @@ def printSummary(results) {
     summary += "                        🚀 BUILD & PUSH SUMMARY\n"
     summary += "================================================================================\033[0m\n"
     
-    summary += String.format("| %-20s | %-15s | %-10s | %-20s |\n", "Service", "Tag", "Time", "Digest/Status")
+    summary += String.format("| %-20s | %-15s | %-10s | %-20s |\n", "App", "Tag", "Time", "Digest/Status")
     summary += "|----------------------|-----------------|------------|----------------------|\n"
 
     results.each { res ->
-        def statusColor = res.digest.contains("SKIPPED") ? "\033[1;33m" : "\033[1;32m" // Yellow for skip, Green for success
+        def statusColor = res.digest.contains("SKIPPED") ? "\033[1;33m" : "\033[1;32m" 
         summary += String.format("| %-20s | %-15s | %-10s | ${statusColor}%-20s\033[0m |\n", res.service, res.tag, res.duration, res.digest)
     }
     
