@@ -36,6 +36,27 @@ resource "aws_iam_role" "worker" {
   tags = var.common_tags
 }
 
+# C. Secrets Manager Policy
+resource "aws_iam_policy" "secrets_access" {
+  name        = "${var.project_name}-secrets-access-policy"
+  description = "Allow nodes to read project secrets"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        # Restrict access ONLY to secrets starting with the project name
+        Resource = "arn:aws:secretsmanager:*:*:${var.project_name}/*"
+      }
+    ]
+  })
+}
+
 # --- Policy Attachments ---
 
 # Attach EBS CSI Driver Policy (Managed by AWS) to BOTH
@@ -56,6 +77,17 @@ resource "aws_iam_role_policy_attachment" "master_ssm" {
 resource "aws_iam_role_policy_attachment" "worker_ssm" {
   role       = aws_iam_role.worker.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+# Attach Secrets Manager Access Policy to BOTH Roles
+resource "aws_iam_role_policy_attachment" "master_secrets_attach" {
+  role       = aws_iam_role.master.name
+  policy_arn = aws_iam_policy.secrets_access.arn
+}
+# Attach to Worker Role
+resource "aws_iam_role_policy_attachment" "worker_secrets_attach" {
+  role       = aws_iam_role.worker.name
+  policy_arn = aws_iam_policy.secrets_access.arn
 }
 
 # CUSTOM POLICY: AWS Load Balancer Controller (Simplified)
@@ -84,6 +116,7 @@ resource "aws_iam_role_policy" "alb_controller" {
     ]
   })
 }
+
 
 # ---  Instance Profiles ---
 # Attach to the EC2 instances

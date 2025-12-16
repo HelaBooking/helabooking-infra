@@ -8,6 +8,6 @@ variable "project_name" {
 variable "azs" {
   description = "List of Availability Zones"
   type        = list(string)
-  default     = ["apse1-az1", "apse1-az2"] # Using 2 AZs for redundancy
+  default     = ["ap-southeast-1a", "ap-southeast-1b"] # Using 2 AZs for redundancy
 }
 variable "common_tags" { type = map(string) }

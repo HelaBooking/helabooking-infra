@@ -6,7 +6,7 @@ module "helabooking_k8s_control_plane_lb" {
   vpc_id       = module.helabooking_network.vpc_id
   subnets      = module.helabooking_network.private_subnet_ids
   common_tags  = try(local.final_tags, var.common_tags)
-  depends_on   = [module.helabooking_network, module.helabooking_security]
+  depends_on   = [module.helabooking_network, module.helabooking_security, module.k8s_secrets]
 }
 
 # Master Nodes ASG
@@ -31,8 +31,13 @@ module "helabooking_k8s_control_plane_nodes" {
   target_group_arns        = [module.helabooking_k8s_control_plane_lb.target_group_arn]
 
   # User Data
-  user_data_base64 = base64encode(file("${path.module}/scripts/k8s-node-setup.sh"))
+  user_data_base64 = base64encode(templatefile("${path.module}/scripts/k8s-node-setup.sh", {
+    project_name        = var.project_name
+    node_role           = "master"
+    aws_region          = var.aws_region
+    bootstrap_secret_id = module.k8s_secrets.bootstrap_secret_id
+  }))
 
   common_tags = try(local.final_tags, var.common_tags)
-  depends_on  = [module.helabooking_network, module.helabooking_security, module.k8s_node_ssh_keys, module.helabooking_iam]
+  depends_on  = [module.helabooking_network, module.helabooking_security, module.k8s_node_ssh_keys, module.helabooking_iam, module.k8s_secrets]
 }
