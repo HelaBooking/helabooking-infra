@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "project_name" {
   description = "Name of the project"
   type        = string
-  default     = "helabooking-app-cloud" # Change this for DR environments
+  default     = "helabooking-cloud" # Change this for DR environments
 }
 
 variable "vpc_cidr" {
