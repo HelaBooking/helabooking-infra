@@ -10,3 +10,4 @@ variable "azs" {
   type        = list(string)
   default     = ["apse1-az1", "apse1-az2"] # Using 2 AZs for redundancy
 }
+variable "common_tags" { type = map(string) }

@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "project_name" {
   description = "Name of the project"
   type        = string
-  default     = "helabooking-app"
+  default     = "helabooking-app-cloud" # Change this for DR environments
 }
 
 variable "vpc_cidr" {
@@ -21,7 +21,7 @@ variable "common_tags" {
   type        = map(string)
   default = {
     CreatedBy   = "Terraform"
-    Environment = "Prod"
+    Environment = "Prod" # Change this for DR environments
     Project     = "Helabooking-App"
   }
 }
