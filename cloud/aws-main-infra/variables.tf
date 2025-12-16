@@ -35,3 +35,8 @@ variable "secrets_bucket_name" {
   type        = string
   default     = "group9-secrets-bucket"
 }
+variable "k8s_version_to_use" {
+  description = "Kubernetes version to use for the cluster"
+  type        = string
+  default     = "v1.34"
+}

@@ -36,6 +36,7 @@ module "helabooking_k8s_control_plane_nodes" {
     node_role           = "master"
     aws_region          = var.aws_region
     bootstrap_secret_id = module.k8s_secrets.bootstrap_secret_id
+    k8s_version         = var.k8s_version_to_use
   }))
 
   common_tags = try(local.final_tags, var.common_tags)

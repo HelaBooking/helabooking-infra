@@ -5,6 +5,7 @@ PROJECT_NAME="${project_name}"
 NODE_ROLE="${node_role}"
 REGION="${aws_region}"
 BOOTSTRAP_SECRET_ID="${bootstrap_secret_id}"
+K8S_VERSION="${k8s_version}"
 # -------------------------------------------
 
 # 1. Prevent interactive prompts
@@ -58,9 +59,8 @@ sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config
 systemctl restart containerd
 
 # 6. Install Kubernetes Tools
-K8S_VERSION="v1.34"
-curl -fsSL https://pkgs.k8s.io/core:/stable:/${K8S_VERSION}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_VERSION}/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list
+curl -fsSL https://pkgs.k8s.io/core:/stable:/$K8S_VERSION/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$K8S_VERSION/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list
 
 apt-get update
 apt-get install -y kubelet kubeadm kubectl

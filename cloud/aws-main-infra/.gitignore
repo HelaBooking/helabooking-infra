@@ -5,3 +5,4 @@
 keys/*.pem
 keys/*.pub
 !keys/.gitkeep
+metadata.json
