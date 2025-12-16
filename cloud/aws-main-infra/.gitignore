@@ -1,0 +1,8 @@
+# AWS Related Files:
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+keys/*.pem
+keys/*.pub
+!keys/.gitkeep
