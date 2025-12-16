@@ -206,7 +206,8 @@ prometheus:
     probeSelector: {}
     
     # Data Retention
-    retention: 7d
+    retention: 3d
+    retentionSize: 8GB
 
 # --- Alertmanager Configuration ---
 alertmanager:
