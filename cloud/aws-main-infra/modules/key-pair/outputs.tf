@@ -12,5 +12,5 @@ output "private_key_pem" {
 
 output "private_key_path" {
   description = "Path to the local private key file"
-  value       = "${path.root}/keys/${aws_key_pair.key_pair.key_name}.pem"
+  value       = "keys/${aws_key_pair.key_pair.key_name}.pem"
 }
