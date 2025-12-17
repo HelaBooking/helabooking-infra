@@ -136,16 +136,17 @@ pipeline {
                         sh """
                             cd ${env.TERRAFORM_DIRECTORY}
                             
-                            # Generate metadata.json from state
+                            # Generate metadata.json
                             terraform output -raw metadata_json > metadata.json
                             
-                            # Parse Key Path from the generated metadata
+                            # Parse Key Path using jq
                             KEY_PATH=\$(jq -r '.ssh_key_local_path' metadata.json)
                             
-                            # Ensure directory exists for the key
-                            mkdir -p \$(dirname \$KEY_PATH)
+                            # Save the path to a text file so Jenkins can read it later
+                            echo -n "\$KEY_PATH" > ssh_key_path.txt
                             
-                            # Generate Key File from state
+                            # Create directory and generate the .pem file
+                            mkdir -p \$(dirname \$KEY_PATH)
                             terraform output -raw ssh_private_key_pem > \$KEY_PATH
                             chmod 600 \$KEY_PATH
                             
@@ -157,27 +158,23 @@ pipeline {
                             echo "> Metadata uploaded to s3://${env.SECRETS_BUCKET}/${env.S3_METADATA_PATH}"
                         """
 
-                        
                         // Read the file to get the path for archiving
-                        def metadataFile = "${env.TERRAFORM_DIRECTORY}/metadata.json"
-                        echo "> Saving SSH Private Key as Artifact..."
-
-                        if (fileExists(metadataFile)) {
-                            def metadata = readJSON file: metadataFile
-                            // Extract the local path from JSON
-                            def keyPath = metadata.ssh_key_local_path                            
-                            
-                            if (keyPath && fileExists("${env.TERRAFORM_DIRECTORY}/${keyPath}")) {
-                                // Archive using the path found in JSON
-                                dir("${env.TERRAFORM_DIRECTORY}") {
+                        dir("${env.TERRAFORM_DIRECTORY}") {
+                            if (fileExists("ssh_key_path.txt")) {
+                                // Read the path string from the text file we just created
+                                def keyPath = readFile("ssh_key_path.txt").trim()
+                                
+                                echo "> Saving SSH Key Artifact from path: ${keyPath}"
+                                
+                                if (fileExists(keyPath)) {
                                     archiveArtifacts artifacts: keyPath, allowEmptyArchive: false
+                                    echo "> 🟢 [6/6] All Artifacts Saved."
+                                } else {
+                                    error "❌ [6/6] Generated key file not found at: ${keyPath}"
                                 }
-                                echo "> 🟢 [6/6] All Artifacts Saved."
                             } else {
-                                error "❌ [6/6] Private Key file not found at: ${keyPath}"
+                                error "❌ [6/6] Failed to determine SSH key path (ssh_key_path.txt missing)"
                             }
-                        } else {
-                            error "❌ [6/6] Metadata file missing, cannot archive artifacts."
                         }
                     }   
                 }
