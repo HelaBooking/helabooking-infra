@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // --- CONFIGURATION ---
-        TERRAFORM_VERSION = '1.13.5' 
+        TERRAFORM_VERSION = '1.14.3' 
         REQUIRE_APPROVAL = 'true'
 
         // AWS Credentials

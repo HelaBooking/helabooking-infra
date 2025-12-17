@@ -9,3 +9,8 @@ output "private_key_pem" {
   value       = tls_private_key.key.private_key_pem
   sensitive   = true
 }
+
+output "private_key_path" {
+  description = "Path to the local private key file"
+  value       = "${path.root}/keys/${aws_key_pair.key_pair.key_name}.pem"
+}
