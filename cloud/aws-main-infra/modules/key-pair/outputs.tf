@@ -9,8 +9,3 @@ output "private_key_pem" {
   value       = tls_private_key.key.private_key_pem
   sensitive   = true
 }
-
-output "private_key_path" {
-  description = "Path to the local private key file"
-  value       = local_file.private_key.filename
-}

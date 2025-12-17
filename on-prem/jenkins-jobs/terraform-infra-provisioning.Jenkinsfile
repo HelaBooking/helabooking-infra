@@ -38,7 +38,7 @@ pipeline {
                     sh '''
                         echo "> 🔃 [1/6] Installing Dependencies..."
                         # System Tools (AWS CLI, jq, s3cmd)
-                        apt-get update && apt-get install -y unzip wget python3-pip python3-venv sshpass jq s3cmd awscli
+                        apt-get update && apt-get install -y unzip curl jq awscli
                         echo "> 🟢 [1/6] Dependencies are installed!"
                         
                         echo "> 🔃 [2/6] Installing Terraform..."
