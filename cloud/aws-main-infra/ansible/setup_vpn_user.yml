@@ -1,0 +1,13 @@
+# Setup WireGuard VPN User on VPN Nodes
+---
+- name: Create WireGuard VPN User
+  hosts: vpn
+  become: true
+  gather_facts: true
+
+  vars:
+    # Default to 'testuser' if not provided via -e "vpn_username=..."
+    vpn_username: "{{ vpn_username | default('testuser') }}"
+
+  roles:
+    - wireguard-user

@@ -14,11 +14,3 @@ resource "aws_key_pair" "key_pair" {
   depends_on = [tls_private_key.key]
 }
 
-# Save Private Key Locally
-resource "local_file" "private_key" {
-  content = tls_private_key.key.private_key_pem
-  # Saving it to the root keys/ folder (jumping up two levels from the module)
-  filename        = "${path.root}/keys/${var.project_name}-${var.key_pair_name}.pem"
-  file_permission = "0600"
-  depends_on      = [tls_private_key.key]
-}

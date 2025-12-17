@@ -1,7 +1,7 @@
 ################################ AWS Metadata for Ansible ##############################
-resource "local_file" "metadata_json" {
-  filename = "${path.module}/metadata.json"
-  content = jsonencode({
+output "metadata_json" {
+  description = "JSON Metadata for Ansible"
+  value = jsonencode({
     project_name = var.project_name
     vpc_id       = module.helabooking_network.vpc_id
     vpc_cidr     = var.vpc_cidr
@@ -18,8 +18,16 @@ resource "local_file" "metadata_json" {
     # Secrets Identifiers (For Ansible to fetch/update)
     bootstrap_secret_id = module.k8s_secrets.bootstrap_secret_id
     ssh_secret_id       = module.k8s_secrets.ssh_key_id
+    ssh_key_local_path  = module.k8s_node_ssh_keys.private_key_path
+    ssh_key_name        = module.k8s_node_ssh_keys.key_pair_name
 
     # S3 Bucket Info
     s3_secrets_bucket = var.secrets_bucket_name
   })
+}
+
+# Output the Private Key securely so Jenkins can recreate the file
+output "ssh_private_key_pem" {
+  value     = module.k8s_node_ssh_keys.private_key_pem
+  sensitive = true
 }
