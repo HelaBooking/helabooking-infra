@@ -1,0 +1,87 @@
+# Handle Kubeadm Initialization and Cilium CNI Setup on Kubernetes Master Nodes
+# Push Join Commands to AWS Secrets Manager
+---
+- name: Check if cluster is already initialized
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: kube_conf
+
+- name: Initialize Kubernetes Master
+  shell: |
+    kubeadm init \
+      --control-plane-endpoint "{{ k8s_api_endpoint }}:6443" \
+      --kubernetes-version "{{ k8s_version }}" \
+      --pod-network-cidr "{{ k8s_pod_network_cidr }}" \
+      --upload-certs \
+      --ignore-preflight-errors=NumCPU
+  register: kubeadm_output
+  when: not kube_conf.stat.exists
+
+- name: Create .kube directory
+  file:
+    path: /home/ubuntu/.kube
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: "0755"
+
+- name: Copy admin.conf to user home
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/ubuntu/.kube/config
+    remote_src: yes
+    owner: ubuntu
+    group: ubuntu
+
+# --- CILIUM CNI SETUP ---
+- name: Download Cilium CLI
+  become: false
+  shell: |
+    CILIUM_CLI_VERSION= "{{ cilium_cli_version }}"
+    CLI_ARCH=amd64
+    if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi
+    curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz
+    sudo tar xzvfC cilium-linux-${CLI_ARCH}.tar.gz /usr/local/bin
+    rm cilium-linux-${CLI_ARCH}.tar.gz
+  args:
+    creates: /usr/local/bin/cilium
+  when: not kube_conf.stat.exists
+
+- name: Install Cilium into Cluster
+  become: false
+  shell: cilium install --version "{{ cilium_cni_version }}"
+  when: not kube_conf.stat.exists
+
+- name: Wait for Cilium to be ready
+  become: false
+  shell: cilium status --wait
+  when: not kube_conf.stat.exists
+
+# --- JOIN COMMANDS & SECRETS ---
+- name: Generate Join Commands JSON
+  shell: |
+    echo "{\"master_join\": \"$(kubeadm token create --print-join-command) --control-plane --certificate-key $(kubeadm init phase upload-certs --upload-certs | tail -1)\", \"worker_join\": \"$(kubeadm token create --print-join-command)\"}"
+  register: join_cmds_json
+  when: not kube_conf.stat.exists
+
+- name: Update AWS Secret with Join Commands
+  delegate_to: localhost
+  become: false
+  shell: |
+    aws secretsmanager put-secret-value \
+      --secret-id "{{ bootstrap_secret_id }}" \
+      --secret-string '{{ join_cmds_json.stdout }}' \
+      --region {{ aws_region }}
+  when: not kube_conf.stat.exists
+
+# --- S3 BACKUP ---
+- name: Upload Kubeconfig to S3
+  delegate_to: localhost
+  become: false
+  shell: |
+    # Download conf from master to local temp using the ProxyJump
+    scp -o "ProxyCommand ssh -W %h:%p -i {{ ssh_key_path }} ubuntu@{{ hostvars[inventory_hostname]['ansible_ssh_common_args'].split('@')[1][:-1] }}" -i {{ ssh_key_path }} ubuntu@{{ inventory_hostname }}:/home/ubuntu/.kube/config /tmp/kubeconfig_{{ project_name }}
+
+    # Upload to S3
+    aws s3 cp /tmp/kubeconfig_{{ project_name }} s3://{{ s3_secrets_bucket }}/cloud/{{ project_name }}/kube-config.yaml
+  when: not kube_conf.stat.exists

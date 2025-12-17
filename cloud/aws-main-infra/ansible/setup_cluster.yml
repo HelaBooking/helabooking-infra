@@ -1,0 +1,8 @@
+# Setup Kubernetes Cluster in Master Nodes
+---
+- name: Setup Kubernetes Cluster
+  hosts: masters
+  become: true
+  gather_facts: true
+  roles:
+    - k8s-master

@@ -15,7 +15,8 @@ variable "common_tags" {
   default = {
     CreatedBy   = "Terraform"
     Environment = "Prod" # Change this for DR environments
-    Project     = "Helabooking-App"
+    App         = "Helabooking-App"
+    Project     = "helabooking-cloud"
   }
 }
 variable "environment" {

@@ -5,6 +5,7 @@ resource "local_file" "metadata_json" {
     project_name = var.project_name
     vpc_id       = module.helabooking_network.vpc_id
     vpc_cidr     = var.vpc_cidr
+    region       = var.aws_region
 
     # Connectivity
     bastion_public_ip = module.helabooking_bastion_host.public_ip
