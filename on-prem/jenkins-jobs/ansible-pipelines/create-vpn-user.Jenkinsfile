@@ -150,11 +150,11 @@ pipeline {
 
                         // Fetch config from VPN node
                         sh '''
-                            VPN_PUBLIC_IP=$(jq -r '.vpn_public_ip' metadata.json)
+                            VPN_PRIVATE_IP=$(jq -r '.vpn_private_ip' metadata.json)
 
                             scp -o StrictHostKeyChecking=no \
                                 -i cloud/$ENV_NAME/keys/$SSH_KEY_NAME \
-                                ubuntu@$VPN_PUBLIC_IP:/etc/wireguard/clients/$VPN_USERNAME/$VPN_USERNAME.conf \
+                                ubuntu@$VPN_PRIVATE_IP:/etc/wireguard/clients/$VPN_USERNAME/$VPN_USERNAME.conf \
                                 cloud/$ENV_NAME/vpn-users/$VPN_USERNAME.conf
                         '''
 
