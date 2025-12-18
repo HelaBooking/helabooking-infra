@@ -88,7 +88,7 @@ pipeline {
                         
                         // Extract Secret ID & Project Name
                         env.SSH_SECRET_ID = sh(script: "jq -r '.ssh_secret_id' metadata.json", returnStdout: true).trim()
-                        env.SSH_KEY_NAME = sh(script: "jq -r '.ssh_key_name' metadata.json", returnStdout: true).trim()
+                        env.SSH_KEY_NAME = "${sh(script: "jq -r '.ssh_key_name' metadata.json", returnStdout: true).trim()}.pem"
                         env.PROJECT_NAME = sh(script: "jq -r '.project_name' metadata.json", returnStdout: true).trim()
                         
                         if (env.SSH_SECRET_ID == "null" || env.SSH_SECRET_ID == "") {
@@ -107,24 +107,26 @@ pipeline {
         stage('Retrieve SSH Key') {
             steps {
                 ansiColor('xterm') {
-                    sh '''
-                        echo "> 🔃 [3/5] Fetching SSH Key from Secrets Manager..."
-                        mkdir -p keys
-                        
-                        aws secretsmanager get-secret-value \
-                            --secret-id ${SSH_SECRET_ID} \
-                            --region ${AWS_REGION} \
-                            --query SecretString \
-                            --output text > keys/${SSH_KEY_NAME}
-                        
-                        chmod 600 keys/${SSH_KEY_NAME}
-                        
-                        if [ ! -s "keys/${SSH_KEY_NAME}" ]; then
-                            echo "❌ [3/5] Error: Retrieved SSH key is empty."
-                            exit 1
-                        fi
-                        echo "> 🟢 [3/5] SSH Key Retrieved!"
-                    '''
+                    dir("cloud/${env.ENV_NAME}") {
+                        sh '''
+                            echo "> 🔃 [3/5] Fetching SSH Key from Secrets Manager..."
+                            mkdir -p keys
+
+                            aws secretsmanager get-secret-value \
+                                --secret-id ${SSH_SECRET_ID} \
+                                --region ${AWS_REGION} \
+                                --query SecretString \
+                                --output text > keys/${SSH_KEY_NAME}
+
+                            chmod 600 keys/${SSH_KEY_NAME}
+
+                            if [ ! -s "keys/${SSH_KEY_NAME}" ]; then
+                                echo "❌ [3/5] Error: Retrieved SSH key is empty."
+                                exit 1
+                            fi
+                            echo "> 🟢 [3/5] SSH Key Retrieved into ${PWD}/keys!"
+                        '''
+                    }
                 }
             }
         }
@@ -132,9 +134,10 @@ pipeline {
         stage('Bootstrap Cluster') {
             steps {
                 ansiColor('xterm') {
-                    dir('ansible') {
+                    dir("cloud/${env.ENV_NAME}/ansible") {
                         sh '''
                             echo "> 🔃 [4/5] Running Ansible: Setup Kubernetes Cluster..."
+                            echo "> Working Directory: ${PWD}"
                             
                             # Ensure inventory script is executable
                             chmod +x inventory/dynamic_inventory.py
