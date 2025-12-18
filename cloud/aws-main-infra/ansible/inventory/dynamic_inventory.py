@@ -83,10 +83,10 @@ def get_inventory():
         "masters": { "hosts": master_ips },
         "workers": { "hosts": worker_ips },
         "vpn": {
-            "hosts": [data["vpn_public_ip"]],
+            "hosts": [data["vpn_private_ip"]],
             "vars": {
                 # Inherit the ProxyCommand from the 'all' group.
-        "vpn_private_ip": data.get("vpn_private_ip")
+        "vpn_public_ip": data.get("vpn_public_ip")
     }
 }
     }
