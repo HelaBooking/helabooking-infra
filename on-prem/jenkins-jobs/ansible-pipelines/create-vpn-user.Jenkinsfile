@@ -113,7 +113,7 @@ pipeline {
                         script {
                             echo "> 🔃 [3/4] Managing VPN user: ${params.VPN_USERNAME}"
                             sh '''
-                            mkdir -p /tmp/vpn-users
+                            mkdir -p tmp/vpn-users
                             '''
                             def status = sh(script: """
                                 chmod +x inventory/dynamic_inventory.py
@@ -137,11 +137,10 @@ pipeline {
                 ansiColor('xterm') {
                     script {
                         echo "> 🔃 [4/4] Collecting VPN config..."
-                        def userConfPath = "/tmp/vpn-users/${params.VPN_USERNAME}.conf"
+                        def userConfPath = "tmp/vpn-users/${params.VPN_USERNAME}.conf"  // workspace-relative
                         if (!fileExists(userConfPath)) {
                             error "❌ VPN config file not saved to ${userConfPath}"
                         }   
-                        // Save the config as a Jenkins artifact
                         archiveArtifacts artifacts: userConfPath, allowEmptyArchive: false
                         echo "> 🟢 [4/4] VPN config archived for ${params.VPN_USERNAME}!"
                     }

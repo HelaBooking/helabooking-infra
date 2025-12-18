@@ -28,5 +28,5 @@
     - name: Fetch VPN client config to Jenkins Agent
       fetch:
         src: "/etc/wireguard/clients/{{ vpn_username }}/{{ vpn_username }}.conf"
-        dest: "/tmp/vpn-users/{{ vpn_username }}.conf"
+        dest: "tmp/vpn-users/{{ vpn_username }}.conf" # relative to workspace
         flat: yes
