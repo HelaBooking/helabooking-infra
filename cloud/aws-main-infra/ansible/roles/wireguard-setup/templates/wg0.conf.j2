@@ -1,0 +1,10 @@
+[Interface]
+Address = {{ wireguard_network_prefix }}.1/24
+ListenPort = {{ wireguard_port }}
+PrivateKey = {{ private_key }}
+
+# Masquerade traffic leaving the physical interface
+PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o ens5 -j MASQUERADE
+PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o ens5 -j MASQUERADE
+
+SaveConfig = true

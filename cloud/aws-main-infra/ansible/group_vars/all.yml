@@ -1,0 +1,23 @@
+---
+################## Global Configuration ##################
+# These are defaults. They are overridden by metadata.json if present there.
+
+# AWS Region (Can be overridden by extra vars)
+aws_region: "ap-southeast-1"
+
+# Kubernetes Version to install/init
+k8s_version: "v1.34.2"
+k8s_pod_network_cidr: "10.10.0.0/16"
+
+# Cilium Versions (Network Plugin)
+# $(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
+cilium_cli_version: "v0.18.9"
+cilium_cni_version: "1.18.4"
+
+# SSH Key Path (Used inside playbooks for copying files)
+ssh_key_path: "../keys/helabooking-cloud-k8s-node-key.pem"
+
+# WireGuard VPN Configuration
+wireguard_port: 51820
+wireguard_network_prefix: "172.16.0"
+wireguard_dns: "8.8.8.8"
