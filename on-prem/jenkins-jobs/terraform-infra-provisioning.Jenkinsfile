@@ -76,12 +76,17 @@ pipeline {
                         terraform plan -out=tfplan -detailed-exitcode
                         """, returnStatus: true)
 
-                        echo "> 🟢 [4/6] Terraform Plan completed."
                         env.PLAN_EXIT_CODE = planExitCode.toString()
                         
                         if (env.PLAN_EXIT_CODE == '0') {
                             echo "> ℹ️ No changes detected in Terraform plan. Skipping Apply stage."
                         }
+                        if (env.PLAN_EXIT_CODE == '1') {
+                            error "❌ Terraform Plan failed! Check logs for syntax or provider errors."
+                        } else {
+                            echo "> 🟢 [4/6] Terraform Plan completed."
+                        }
+
                     }
                 }
             }
