@@ -5,6 +5,43 @@
   become: true
   gather_facts: true
 
+  # --- PRE-TASKS TO CONFIGURE CONTAINERD AND KERNEL MODULES ---
+  pre_tasks:
+    # Ensure containerd is configured properly
+    - name: Generate default containerd config
+      shell: |
+        mkdir -p /etc/containerd
+        containerd config default > /etc/containerd/config.toml
+      args:
+        creates: /etc/containerd/config.toml
+
+    - name: Enable SystemdCgroup in containerd
+      replace:
+        path: /etc/containerd/config.toml
+        regexp: "SystemdCgroup = false"
+        replace: "SystemdCgroup = true"
+
+    - name: Restart containerd
+      systemd:
+        name: containerd
+        state: restarted
+        enabled: yes
+
+    # Ensure Kernel Modules are loaded
+    - name: Load br_netfilter module
+      modprobe:
+        name: br_netfilter
+        state: present
+
+    - name: Enable IPv4 forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: "1"
+        sysctl_set: yes
+        state: present
+        reload: yes
+
+  # --- SETUP KUBERNETES MASTER ---
   roles:
     - k8s-master
 

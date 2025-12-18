@@ -137,17 +137,27 @@ pipeline {
                     // Copy metadata.json to where dynamic_inventory.py expects it
                     sh "cp metadata.json cloud/${env.ENV_NAME}/metadata.json"
                     dir("cloud/${env.ENV_NAME}/ansible") {
-                        sh '''
-                            echo "> 🔃 [4/5] Running Ansible: Setup Kubernetes Cluster..."
-                            echo "> Working Directory: ${PWD}"
-                            
-                            # Ensure inventory script is executable
-                            chmod +x inventory/dynamic_inventory.py
-                            
-                            # Run Playbook
-                            ansible-playbook setup_cluster.yml
-                            echo "> 🟢 [4/5] Ansible Playbook Completed!"
-                        '''
+                    script {
+                            try {
+                                echo "> 🔃 [4/5] Running Ansible: Setup Kubernetes Cluster..."
+                                sh '''
+                                    chmod +x inventory/dynamic_inventory.py
+                                    ansible-playbook setup_cluster.yml
+                                '''
+                                echo "> 🟢 [4/5] Cluster Bootstrapped Successfully!"
+                            } catch (Exception e) {
+                                echo "❌ [4/5] Bootstrap Failed! Initiating Rollback..."
+                                
+                                // Run the Reset Playbook
+                                sh '''
+                                    chmod +x inventory/dynamic_inventory.py
+                                    ansible-playbook rollback_cluster.yml
+                                '''
+                                
+                                echo "⚠️ Rollback Complete. The cluster nodes have been reset."
+                                error "Pipeline failed during Bootstrap. Nodes were reset for safety."
+                            }
+                        }
                     }
                 }
             }
