@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # --- CONFIGURATION INJECTED BY TERRAFORM ---
 PROJECT_NAME="${project_name}"
@@ -82,7 +83,11 @@ apt-get install -y containerd
 mkdir -p /etc/containerd
 containerd config default | tee /etc/containerd/config.toml > /dev/null
 sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+# HARD restart containerd
+systemctl daemon-reexec
 systemctl restart containerd
+systemctl enable containerd
+
 
 # 6. Install Kubernetes Tools
 curl -fsSL https://pkgs.k8s.io/core:/stable:/$K8S_VERSION/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
@@ -91,6 +96,11 @@ echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.
 apt-get update
 apt-get install -y kubelet kubeadm kubectl
 apt-mark hold kubelet kubeadm kubectl
+
+# Restart kubelet AFTER containerd
+systemctl restart kubelet
+systemctl enable kubelet
+
 
 # 7. PERSISTENT AUTO-JOIN & MAINTENANCE LOGIC
 echo "------------------------------------------------"
