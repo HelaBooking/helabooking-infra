@@ -7,13 +7,14 @@
 
   # --- PRE-TASKS TO CONFIGURE CONTAINERD AND KERNEL MODULES ---
   pre_tasks:
-    # Ensure containerd is configured properly
+    # --- CONTAINER RUNTIME FIXES ---
+    - name: Create containerd config folder
+      file:
+        path: /etc/containerd
+        state: directory
+
     - name: Generate default containerd config
-      shell: |
-        mkdir -p /etc/containerd
-        containerd config default > /etc/containerd/config.toml
-      args:
-        creates: /etc/containerd/config.toml
+      shell: containerd config default > /etc/containerd/config.toml
 
     - name: Enable SystemdCgroup in containerd
       replace:
@@ -21,13 +22,30 @@
         regexp: "SystemdCgroup = false"
         replace: "SystemdCgroup = true"
 
+    # FIX: Update Pause Image to match Kubeadm 1.34 requirements
+    - name: Update Sandbox Image (Pause Container)
+      replace:
+        path: /etc/containerd/config.toml
+        regexp: "registry.k8s.io/pause:3.8"
+        replace: "registry.k8s.io/pause:latest"
+
     - name: Restart containerd
       systemd:
         name: containerd
         state: restarted
         enabled: yes
 
-    # Ensure Kernel Modules are loaded
+    # FIX: Configure crictl so you can debug running containers
+    - name: Configure crictl
+      copy:
+        dest: /etc/crictl.yaml
+        content: |
+          runtime-endpoint: unix:///run/containerd/containerd.sock
+          image-endpoint: unix:///run/containerd/containerd.sock
+          timeout: 10
+          debug: false
+
+    # --- KERNEL MODULES ---
     - name: Load br_netfilter module
       modprobe:
         name: br_netfilter

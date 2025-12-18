@@ -1,7 +1,7 @@
 # Rollback Kubernetes Cluster Setup in case of failures
 ---
 - name: Reset Kubernetes Cluster
-  hosts: all
+  hosts: masters:workers
   become: true
   gather_facts: false
   tasks:
