@@ -134,6 +134,8 @@ pipeline {
         stage('Bootstrap Cluster') {
             steps {
                 ansiColor('xterm') {
+                    // Copy metadata.json to where dynamic_inventory.py expects it
+                    sh "cp metadata.json cloud/${env.ENV_NAME}/metadata.json"
                     dir("cloud/${env.ENV_NAME}/ansible") {
                         script {
                             echo "> 🔃 Running Ansible: Setup Kubernetes Cluster..."

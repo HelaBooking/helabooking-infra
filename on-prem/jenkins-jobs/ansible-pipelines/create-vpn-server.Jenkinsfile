@@ -103,6 +103,8 @@ pipeline {
         stage('Setup WireGuard VPN') {
             steps {
                 ansiColor('xterm') {
+                    // Copy metadata.json to where dynamic_inventory.py expects it
+                    sh "cp metadata.json cloud/${env.ENV_NAME}/metadata.json"
                     dir("cloud/${env.ENV_NAME}/ansible") {
                         script {
                             echo "> 🔃 [3/4] Running Ansible to setup WireGuard VPN..."
