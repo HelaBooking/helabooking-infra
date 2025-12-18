@@ -200,7 +200,8 @@ module "jenkins_helm" {
       value_list = [
         "github-branch-source:1917.v9ee8a_39b_3d0d",
         "ansicolor:1.0.6",
-        "generic-webhook-trigger:2.4.1"
+        "generic-webhook-trigger:2.4.1",
+        "git-parameter:460.v71e7583a_c099"
       ]
     },
     # Config as Code (JCasC) scripts
