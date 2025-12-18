@@ -143,21 +143,26 @@ pipeline {
                         echo "> 🔃 [4/4] Collecting VPN config..."
 
                         def userConfPath = "cloud/${env.ENV_NAME}/vpn-users/${params.VPN_USERNAME}.conf"
-                        sh "mkdir -p cloud/${env.ENV_NAME}/vpn-users"
+
+                        sh '''
+                            mkdir -p cloud/$ENV_NAME/vpn-users
+                        '''
 
                         // Fetch config from VPN node
-                        sh """
+                        sh '''
+                            VPN_PUBLIC_IP=$(jq -r '.vpn_public_ip' metadata.json)
+
                             scp -o StrictHostKeyChecking=no \
-                                -i cloud/${env.ENV_NAME}/keys/${SSH_KEY_NAME} \
-                                ubuntu@$(jq -r '.vpn_public_ip' metadata.json):/etc/wireguard/clients/${params.VPN_USERNAME}/${params.VPN_USERNAME}.conf \
-                                ${userConfPath}
-                        """
+                                -i cloud/$ENV_NAME/keys/$SSH_KEY_NAME \
+                                ubuntu@$VPN_PUBLIC_IP:/etc/wireguard/clients/$VPN_USERNAME/$VPN_USERNAME.conf \
+                                cloud/$ENV_NAME/vpn-users/$VPN_USERNAME.conf
+                        '''
 
                         if (params.SHOW_QR) {
-                            sh """
+                            sh '''
                                 echo "📱 QR Code:"
-                                qrencode -t ansiutf8 < ${userConfPath}
-                            """
+                                qrencode -t ansiutf8 < cloud/$ENV_NAME/vpn-users/$VPN_USERNAME.conf
+                            '''
                         }
 
                         archiveArtifacts artifacts: userConfPath, allowEmptyArchive: false
@@ -166,6 +171,7 @@ pipeline {
                 }
             }
         }
+
     }
 
     post {
