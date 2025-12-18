@@ -20,10 +20,12 @@ resource "aws_lb_target_group" "kube_api_tg" {
 
   # Critical for NLB health checks on K8s API
   health_check {
-    protocol = "TCP"
-    port     = 6443
-    interval = 30
-    timeout  = 10
+    protocol            = "TCP"
+    port                = 6443
+    interval            = 5
+    timeout             = 3
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
   }
 
   tags = var.common_tags
