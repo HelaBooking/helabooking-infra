@@ -134,28 +134,39 @@ pipeline {
         stage('Bootstrap Cluster') {
             steps {
                 ansiColor('xterm') {
-                    // Copy metadata.json to where dynamic_inventory.py expects it
-                    sh "cp metadata.json cloud/${env.ENV_NAME}/metadata.json"
                     dir("cloud/${env.ENV_NAME}/ansible") {
-                    script {
-                            try {
-                                echo "> 🔃 [4/5] Running Ansible: Setup Kubernetes Cluster..."
-                                sh '''
-                                    chmod +x inventory/dynamic_inventory.py
-                                    ansible-playbook setup_cluster.yml
-                                '''
-                                echo "> 🟢 [4/5] Cluster Bootstrapped Successfully!"
-                            } catch (Exception e) {
-                                echo "❌ [4/5] Bootstrap Failed! Initiating Rollback..."
-                                
-                                // Run the Reset Playbook
-                                sh '''
-                                    chmod +x inventory/dynamic_inventory.py
-                                    ansible-playbook rollback_cluster.yml
-                                '''
-                                
-                                echo "⚠️ Rollback Complete. The cluster nodes have been reset."
-                                error "Pipeline failed during Bootstrap. Nodes were reset for safety."
+                        script {
+                            echo "> 🔃 Running Ansible: Setup Kubernetes Cluster..."
+
+                            def bootstrapStatus = sh(script: '''
+                                chmod +x inventory/dynamic_inventory.py
+                                ansible-playbook setup_cluster.yml
+                            ''', returnStatus: true)
+
+                            if (bootstrapStatus != 0) {
+                                echo "❌ Ansible playbook failed!"
+
+                                // Ask user whether to rollback
+                                def rollbackDecision = input(
+                                    message: "The cluster bootstrap failed. Do you want to rollback?",
+                                    ok: "Proceed",
+                                    parameters: [
+                                        booleanParam(defaultValue: false, description: 'Rollback will reset nodes to clean state', name: 'ROLLBACK')
+                                    ]
+                                )
+
+                                if (rollbackDecision) {
+                                    echo "⚠️ Rolling back cluster..."
+                                    sh '''
+                                        chmod +x inventory/dynamic_inventory.py
+                                        ansible-playbook rollback_cluster.yml
+                                    '''
+                                    error "Cluster rollback executed due to failure."
+                                } else {
+                                    echo "ℹ️ User chose to skip rollback. Investigate the failure manually."
+                                }
+                            } else {
+                                echo "> 🟢 Cluster bootstrap completed successfully."
                             }
                         }
                     }
