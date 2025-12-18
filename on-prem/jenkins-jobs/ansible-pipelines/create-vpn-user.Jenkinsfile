@@ -137,7 +137,7 @@ pipeline {
                 ansiColor('xterm') {
                     script {
                         echo "> 🔃 [4/4] Collecting VPN config..."
-                        def userConfPath = "tmp/vpn-users/${params.VPN_USERNAME}.conf"  // workspace-relative
+                        def userConfPath = "cloud/${env.ENV_NAME}/ansible/tmp/vpn-users/${params.VPN_USERNAME}.conf"
                         if (!fileExists(userConfPath)) {
                             error "❌ VPN config file not saved to ${userConfPath}"
                         }   
