@@ -18,12 +18,6 @@ pipeline {
             defaultValue: '',
             description: 'WireGuard VPN username (required)'
         )
-
-        booleanParam(
-            name: 'SHOW_QR',
-            defaultValue: false,
-            description: 'Display QR code for client config in Jenkins logs'
-        )
     }
 
     environment {
@@ -118,7 +112,9 @@ pipeline {
                     dir("cloud/${env.ENV_NAME}/ansible") {
                         script {
                             echo "> 🔃 [3/4] Managing VPN user: ${params.VPN_USERNAME}"
-
+                            sh '''
+                            mkdir -p cloud/$ENV_NAME/vpn-users
+                            '''
                             def status = sh(script: """
                                 chmod +x inventory/dynamic_inventory.py
                                 ansible-playbook setup_vpn_user.yml \
@@ -141,30 +137,11 @@ pipeline {
                 ansiColor('xterm') {
                     script {
                         echo "> 🔃 [4/4] Collecting VPN config..."
-
                         def userConfPath = "cloud/${env.ENV_NAME}/vpn-users/${params.VPN_USERNAME}.conf"
-
-                        sh '''
-                            mkdir -p cloud/$ENV_NAME/vpn-users
-                        '''
-
-                        // Fetch config from VPN node
-                        sh '''
-                            VPN_PRIVATE_IP=$(jq -r '.vpn_private_ip' metadata.json)
-
-                            scp -o StrictHostKeyChecking=no \
-                                -i cloud/$ENV_NAME/keys/$SSH_KEY_NAME \
-                                ubuntu@$VPN_PRIVATE_IP:/etc/wireguard/clients/$VPN_USERNAME/$VPN_USERNAME.conf \
-                                cloud/$ENV_NAME/vpn-users/$VPN_USERNAME.conf
-                        '''
-
-                        if (params.SHOW_QR) {
-                            sh '''
-                                echo "📱 QR Code:"
-                                qrencode -t ansiutf8 < cloud/$ENV_NAME/vpn-users/$VPN_USERNAME.conf
-                            '''
-                        }
-
+                        if (!fileExists(userConfPath)) {
+                            error "❌ VPN config file not saved to ${userConfPath}"
+                        }   
+                        // Save the config as a Jenkins artifact
                         archiveArtifacts artifacts: userConfPath, allowEmptyArchive: false
                         echo "> 🟢 [4/4] VPN config archived for ${params.VPN_USERNAME}!"
                     }

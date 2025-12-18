@@ -22,3 +22,11 @@
 
   roles:
     - wireguard-user
+
+  # Send the config file back to Jenkins Agent
+  post_tasks:
+    - name: Fetch VPN client config to Jenkins Agent
+      fetch:
+        src: "/etc/wireguard/clients/{{ vpn_username }}/{{ vpn_username }}.conf"
+        dest: "cloud/{{ env.ENV_NAME }}/vpn-users/{{ vpn_username }}.conf"
+        flat: yes
