@@ -6,7 +6,7 @@
 aws_region: "ap-southeast-1"
 
 # Kubernetes Version to install/init
-k8s_version: "v1.34"
+k8s_version: "v1.34.2"
 k8s_pod_network_cidr: "10.10.0.0/16"
 
 # Cilium Versions (Network Plugin)
