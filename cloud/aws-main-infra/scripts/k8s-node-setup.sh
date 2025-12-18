@@ -66,42 +66,76 @@ apt-get update
 apt-get install -y kubelet kubeadm kubectl
 apt-mark hold kubelet kubeadm kubectl
 
-# 7. AUTO-JOIN LOGIC (The "Wait for Secret" Loop)
+# 7. PERSISTENT AUTO-JOIN & MAINTENANCE LOGIC
 echo "------------------------------------------------"
-echo "Starting Cluster Bootstrap Check..."
-echo "Role: $NODE_ROLE"
-echo "Secret ID: $BOOTSTRAP_SECRET_ID"
+echo "Initializing Background Cluster Maintainer..."
 echo "------------------------------------------------"
+
+# Create a dedicated maintenance script
+cat <<EOF > /usr/local/bin/k8s-maintainer.sh
+#!/bin/bash
+
+check_if_joined() {
+    # Check if the join config exists and kubelet is active
+    if [[ -f "/etc/kubernetes/kubelet.conf" ]] && systemctl is-active --quiet kubelet; then
+        return 0 # Joined
+    else
+        return 1 # Not joined
+    fi
+}
 
 while true; do
-  # Fetch Secret JSON
-  SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id "$BOOTSTRAP_SECRET_ID" --region "$REGION" --query SecretString --output text 2>/dev/null)
-
-  if [[ -n "$SECRET_JSON" ]]; then
-    # Check if we are Master or Worker and extract the specific command
-    if [[ "$NODE_ROLE" == "master" ]]; then
-       # Note: We check for 'master_join' key
-       JOIN_CMD=$(echo "$SECRET_JSON" | jq -r '.master_join // empty')
+    if check_if_joined; then
+        echo "\$(date): Node is already healthy and joined to a cluster."
     else
-       # Note: We check for 'worker_join' key
-       JOIN_CMD=$(echo "$SECRET_JSON" | jq -r '.worker_join // empty')
+        echo "\$(date): Node is NOT in a cluster. Checking for bootstrap secret..."
+        
+        # Fetch Secret JSON
+        SECRET_JSON=\$(aws secretsmanager get-secret-value --secret-id "$BOOTSTRAP_SECRET_ID" --region "$REGION" --query SecretString --output text 2>/dev/null)
+
+        if [[ -n "\$SECRET_JSON" ]]; then
+            # Extract role-specific command
+            if [[ "$NODE_ROLE" == "master" ]]; then
+                JOIN_CMD=\$(echo "\$SECRET_JSON" | jq -r '.master_join // empty')
+            else
+                JOIN_CMD=\$(echo "\$SECRET_JSON" | jq -r '.worker_join // empty')
+            fi
+
+            if [[ -n "\$JOIN_CMD" && "\$JOIN_CMD" != "null" ]]; then
+                echo "\$(date): ✅ Valid join command found! Preparing node..."
+                
+                # 1. Clean up any stale state from previous clusters
+                kubeadm reset -f
+                rm -rf /etc/cni/net.d
+                iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
+                
+                # 2. Execute the join command
+                echo "\$(date): Executing: \$JOIN_CMD"
+                eval "\$JOIN_CMD"
+                
+                if [ \$? -eq 0 ]; then
+                    echo "\$(date): 🎉 Successfully joined the cluster!"
+                    systemctl restart kubelet
+                else
+                    echo "\$(date): ❌ Join failed. Will retry in next cycle."
+                fi
+            else
+                echo "\$(date): ⏳ Secret exists but '$NODE_ROLE' command is empty. Ansible is likely still working..."
+            fi
+        else
+            echo "\$(date): ❌ Secret not found in AWS Secrets Manager."
+        fi
     fi
 
-    # If we found a valid command (not null/empty), execute it
-    if [[ -n "$JOIN_CMD" && "$JOIN_CMD" != "null" ]]; then
-      echo "✅ Bootstrap command found! Joining cluster..."
-      
-      # Execute the join command
-      eval "$JOIN_CMD"
-      
-      echo "🎉 Join Complete!"
-      break
-    else
-      echo "⏳ Cluster secret exists, but '$NODE_ROLE' join command is missing. Waiting for Ansible..."
-    fi
-  else
-    echo "❌ Secret not found or empty. Waiting for Ansible to create cluster..."
-  fi
-
-  sleep 30
+    # Check every 30 seconds
+    sleep 30
 done
+EOF
+
+# Make the script executable
+chmod +x /usr/local/bin/k8s-maintainer.sh
+
+# Run the maintainer in the background (survives session exit)
+nohup /usr/local/bin/k8s-maintainer.sh > /var/log/k8s-maintainer.log 2>&1 &
+
+echo "🎉 Maintainer started in background. Monitor progress with: tail -f /var/log/k8s-maintainer.log"
