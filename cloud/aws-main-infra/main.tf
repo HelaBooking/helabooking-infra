@@ -3,7 +3,7 @@ terraform {
   # Backend configuration
   backend "s3" {
     bucket       = "group9-terraform-state-bucket"
-    key          = "cloud/aws-main-infra-terraform.tfstate"
+    key          = "cloud/aws-main-infra-terraform.tfstate" # Change this for new environments. Keep the format cloud/aws-<env>-infra-terraform.tfstate
     region       = "ap-southeast-1"
     use_lockfile = true
     encrypt      = true

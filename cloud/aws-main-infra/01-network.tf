@@ -4,5 +4,5 @@ module "helabooking_network" {
   project_name = var.project_name
   vpc_cidr     = var.vpc_cidr
   common_tags  = try(local.final_tags, var.common_tags)
-  azs          = ["ap-southeast-1a", "ap-southeast-1b"]
+  azs          = var.aws_availability_zones
 }

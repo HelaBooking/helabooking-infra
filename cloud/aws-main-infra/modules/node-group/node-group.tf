@@ -50,7 +50,11 @@ resource "aws_launch_template" "k8s_node_lt" {
 
   lifecycle {
     create_before_destroy = true
+    ignore_changes = [
+      image_id
+    ]
   }
+
 }
 
 # Auto Scaling Group

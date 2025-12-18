@@ -34,6 +34,13 @@ resource "aws_instance" "ec2" {
   tags = merge(var.common_tags, {
     Name = "${var.project_name}-${var.name_prefix}"
   })
+
+  # Ignore AMI changes to prevent instance replacement
+  lifecycle {
+    ignore_changes = [
+      ami
+    ]
+  }
 }
 
 resource "aws_eip" "ec2_eip" {

@@ -4,32 +4,37 @@ variable "aws_region" {
   type        = string
   default     = "ap-southeast-1"
 }
+variable "aws_availability_zones" {
+  description = "List of AWS availability zones to use"
+  type        = list(string)
+  default     = ["ap-southeast-1a", "ap-southeast-1b"]
+}
 variable "project_name" {
   description = "Name of the project"
   type        = string
-  default     = "helabooking-cloud" # Change this for DR environments
+  default     = "helabooking-cloud" # Change this for new environments
 }
 variable "common_tags" {
   description = "Common tags for all resources"
   type        = map(string)
   default = {
     CreatedBy   = "Terraform"
-    Environment = "Prod" # Change this for DR environments
+    Environment = "Prod" # Change this for new environments
     App         = "Helabooking-App"
-    Project     = "helabooking-cloud"
+    Project     = "helabooking-cloud" # Change this for new environments
   }
 }
 variable "environment" {
   description = "Deployment environment (e.g., dev, prod)"
   type        = string
-  default     = "prod"
+  default     = "prod" # Change this for new environments
 }
 
 ############################### Specific Variables ##############################
 variable "vpc_cidr" {
   description = "CIDR block for the VPC"
   type        = string
-  default     = "10.0.0.0/16"
+  default     = "10.0.0.0/16" # Change this for new environments (use non overlapping CIDRs)
 }
 variable "secrets_bucket_name" {
   description = "Name of the S3 bucket for storing secrets"
