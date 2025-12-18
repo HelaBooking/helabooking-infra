@@ -111,7 +111,7 @@ pipeline {
 
         stage('Terraform Apply') {
             when {
-                expression { currentBuild.result != 'ABORTED' && env.PLAN_EXIT_CODE == '0' }
+                expression { currentBuild.result != 'ABORTED' && (env.PLAN_EXIT_CODE == '0' || env.PLAN_EXIT_CODE == '2') }
             }
             steps {
                 ansiColor('xterm') {
