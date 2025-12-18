@@ -140,7 +140,7 @@ pipeline {
                             
                             def status = sh(script: '''
                                 chmod +x inventory/dynamic_inventory.py
-                                ansible-playbook setup_cluster.yml --fail-on-empty-inventory
+                                ansible-playbook setup_cluster.yml
                             ''', returnStatus: true)
         
                             if (status != 0) {

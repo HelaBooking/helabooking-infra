@@ -109,7 +109,7 @@ pipeline {
                             
                             def status = sh(script: '''
                                 chmod +x inventory/dynamic_inventory.py
-                                ansible-playbook setup_vpn.yml --fail-on-empty-inventory
+                                ansible-playbook setup_vpn.yml
                             ''', returnStatus: true)
                             
                             if (status != 0) {
