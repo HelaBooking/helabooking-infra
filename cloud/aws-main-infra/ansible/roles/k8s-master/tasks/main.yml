@@ -33,37 +33,17 @@
     owner: ubuntu
     group: ubuntu
 
-# --- CILIUM CNI SETUP ---
-- name: Download Cilium CLI
-  become: false
-  shell: |
-    CILIUM_CLI_VERSION="{{ cilium_cli_version }}"
-    CLI_ARCH=amd64
-    if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi
-    curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz
-    sudo tar xzvf cilium-linux-${CLI_ARCH}.tar.gz -C /usr/local/bin
-    rm cilium-linux-${CLI_ARCH}.tar.gz
-  args:
-    creates: /usr/local/bin/cilium
+# --- CALICO CNI SETUP (Replacing Cilium) ---
+- name: Download Calico Manifest
+  get_url:
+    url: https://raw.githubusercontent.com/projectcalico/calico/v3.30.5/manifests/calico.yaml
+    dest: /tmp/calico.yaml
+    mode: "0644"
   when: not kube_conf.stat.exists
 
-- name: Install Cilium into Cluster
+- name: Apply Calico Manifest
   become: false
-  shell: |
-    cilium install --version "{{ cilium_cni_version }}" \
-      --set ipam.mode=cluster-pool \
-      --set mtu.autoDetector.enabled=true \
-      --set bpf.hostLegacyRouting=true \
-      --set devices=eth+ \
-      --set routingMode=tunnel \
-      --set tunnelProtocol=vxlan \
-      --set k8sServiceHost={{ k8s_api_endpoint }} \
-      --set k8sServicePort=6443
-  when: not kube_conf.stat.exists
-
-- name: Wait for Cilium to be ready
-  become: false
-  shell: cilium status --wait
+  command: kubectl apply -f /tmp/calico.yaml
   when: not kube_conf.stat.exists
 
 # --- JOIN COMMANDS & SECRETS ---
