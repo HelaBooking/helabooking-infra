@@ -30,8 +30,8 @@
       NC='\033[0m' 
 
       if [[ $EUID -ne 0 ]]; then
-         echo -e "${RED}Error: This script must be run as root${NC}"
-         exit 1
+          echo -e "${RED}Error: This script must be run as root${NC}"
+          exit 1
       fi
 
       USERNAME=$1
