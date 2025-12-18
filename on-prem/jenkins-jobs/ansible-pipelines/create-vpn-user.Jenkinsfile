@@ -25,7 +25,8 @@ pipeline {
         SECRETS_BUCKET = 'group9-secrets-bucket'
 
         // AWS Credentials
-        AWS_REGION = 'ap-southeast-1'
+        AWS_REGION = 'ap-southeast-1' // Default
+        AWS_REGION_S3 = 'ap-southeast-1'
         AWS_ACCESS_KEY_ID = credentials('aws-access-key')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
 
@@ -60,25 +61,43 @@ pipeline {
             }
         }
 
+        stage('Install Tools') {
+            steps {
+                ansiColor('xterm') {
+                    sh '''
+                        echo "> 🔃 [1/5] Installing Dependencies..."
+                        apt-get update && apt-get install -y python3-pip python3-venv sshpass jq awscli
+                        pip3 install ansible boto3 --break-system-packages
+
+                        # Setup AWS CLI:
+                        aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}
+                        aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}
+                        echo "> 🟢 [1/5] Tools Ready"
+                    '''
+                }
+            }
+        }
+
         stage('Fetch Configuration') {
             steps {
                 ansiColor('xterm') {
                     script {
-                        echo "> 🔃 [1/4] Determining Environment Configuration..."
+                        echo "> 🔃 [1/5] Determining Environment Configuration..."
                         def cleanBranch = params.BRANCH_NAME.replace('origin/', '')
                         env.ENV_NAME = "${cleanBranch}-infra"
                         env.S3_METADATA_PATH = "cloud/${env.ENV_NAME}/metadata.json"
 
-                        sh "aws s3 cp s3://${SECRETS_BUCKET}/${env.S3_METADATA_PATH} metadata.json"
+                        sh "aws s3 --region ${AWS_REGION_S3} cp s3://${SECRETS_BUCKET}/${env.S3_METADATA_PATH} metadata.json"
 
                         env.SSH_SECRET_ID = sh(script: "jq -r '.ssh_secret_id' metadata.json", returnStdout: true).trim()
                         env.SSH_KEY_NAME = "${sh(script: "jq -r '.ssh_key_name' metadata.json", returnStdout: true).trim()}.pem"
+                        env.AWS_REGION = sh(script: "jq -r '.region' metadata.json", returnStdout: true).trim()
 
                         if (!env.SSH_SECRET_ID || env.SSH_SECRET_ID == "null") {
                             error "❌ Invalid metadata.json (missing ssh_secret_id)"
                         }
 
-                        echo "> 🟢 [1/4] Configuration Retrieved!"
+                        echo "> 🟢 [1/5] Configuration Retrieved!"
                     }
                 }
             }
@@ -89,7 +108,7 @@ pipeline {
                 ansiColor('xterm') {
                     dir("cloud/${env.ENV_NAME}") {
                         sh '''
-                            echo "> 🔃 [2/4] Fetching SSH Key..."
+                            echo "> 🔃 [2/5] Fetching SSH Key..."
                             mkdir -p keys
                             aws secretsmanager get-secret-value \
                                 --secret-id ${SSH_SECRET_ID} \
@@ -97,7 +116,7 @@ pipeline {
                                 --query SecretString \
                                 --output text > keys/${SSH_KEY_NAME}
                             chmod 600 keys/${SSH_KEY_NAME}
-                            echo "> 🟢 [2/4] SSH Key fetched!"
+                            echo "> 🟢 [2/5] SSH Key fetched!"
                         '''
                     }
                 }
@@ -111,7 +130,7 @@ pipeline {
 
                     dir("cloud/${env.ENV_NAME}/ansible") {
                         script {
-                            echo "> 🔃 [3/4] Managing VPN user: ${params.VPN_USERNAME}"
+                            echo "> 🔃 [3/5] Managing VPN user: ${params.VPN_USERNAME}"
                             sh '''
                             mkdir -p tmp/vpn-users
                             '''
@@ -124,7 +143,7 @@ pipeline {
                             if (status != 0) {
                                 error "❌ VPN user creation failed."
                             } else {
-                                echo "> 🟢 [3/4] VPN user ${params.VPN_USERNAME} managed successfully!"
+                                echo "> 🟢 [3/5] VPN user ${params.VPN_USERNAME} managed successfully!"
                             }
                         }
                     }
@@ -136,13 +155,13 @@ pipeline {
             steps {
                 ansiColor('xterm') {
                     script {
-                        echo "> 🔃 [4/4] Collecting VPN config..."
+                        echo "> 🔃 [4/5] Collecting VPN config..."
                         def userConfPath = "cloud/${env.ENV_NAME}/ansible/tmp/vpn-users/${params.VPN_USERNAME}.conf"
                         if (!fileExists(userConfPath)) {
                             error "❌ VPN config file not saved to ${userConfPath}"
                         }   
                         archiveArtifacts artifacts: userConfPath, allowEmptyArchive: false
-                        echo "> 🟢 [4/4] VPN config archived for ${params.VPN_USERNAME}!"
+                        echo "> 🟢 [4/5] VPN config archived for ${params.VPN_USERNAME}!"
                     }
                 }
             }

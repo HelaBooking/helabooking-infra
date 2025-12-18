@@ -19,7 +19,8 @@ pipeline {
         SECRETS_BUCKET = 'group9-secrets-bucket'
         
         // AWS Credentials
-        AWS_REGION = 'ap-southeast-1'
+        AWS_REGION = 'ap-southeast-1' // Default
+        AWS_REGION_S3 = 'ap-southeast-1'
         AWS_ACCESS_KEY_ID = credentials('aws-access-key')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
 
@@ -53,7 +54,6 @@ pipeline {
                         # Setup AWS CLI:
                         aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}
                         aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}
-                        aws configure set default.region ${AWS_REGION}
                         echo "> 🟢 [1/5] Tools Ready"
                     '''
                 }
@@ -84,12 +84,13 @@ pipeline {
                         echo "============================================="
                         
                         // Download Metadata
-                        sh "aws s3 cp s3://${SECRETS_BUCKET}/${env.S3_METADATA_PATH} metadata.json"
+                        sh "aws s3 cp --region ${AWS_REGION_S3} s3://${SECRETS_BUCKET}/${env.S3_METADATA_PATH} metadata.json"
                         
                         // Extract Secret ID & Project Name
                         env.SSH_SECRET_ID = sh(script: "jq -r '.ssh_secret_id' metadata.json", returnStdout: true).trim()
                         env.SSH_KEY_NAME = "${sh(script: "jq -r '.ssh_key_name' metadata.json", returnStdout: true).trim()}.pem"
                         env.PROJECT_NAME = sh(script: "jq -r '.project_name' metadata.json", returnStdout: true).trim()
+                        env.AWS_REGION = sh(script: "jq -r '.region' metadata.json", returnStdout: true).trim()
                         
                         if (env.SSH_SECRET_ID == "null" || env.SSH_SECRET_ID == "") {
                             error "❌ [2/5] Metadata invalid: 'ssh_secret_id' missing. Is the infra provisioned for ${env.ENV_NAME}?"
@@ -190,7 +191,7 @@ pipeline {
                             echo "> ✅ Ansible fetched latest config."
                             
                             // Download existing S3 version to compare
-                            def s3Exit = sh(script: "aws s3 cp s3://${SECRETS_BUCKET}/${S3_KUBECONFIG_PATH} ${s3Config} --quiet", returnStatus: true)
+                            def s3Exit = sh(script: "aws s3 --region ${AWS_REGION_S3} cp s3://${SECRETS_BUCKET}/${S3_KUBECONFIG_PATH} ${s3Config} --quiet", returnStatus: true)
                             
                             def uploadNeeded = false
                             
@@ -212,7 +213,7 @@ pipeline {
                             
                             if (uploadNeeded) {
                                 echo "> ☁️ Uploading updated config to S3..."
-                                sh "aws s3 cp ${localConfig} s3://${SECRETS_BUCKET}/${S3_KUBECONFIG_PATH}"
+                                sh "aws s3 --region ${AWS_REGION_S3} cp ${localConfig} s3://${SECRETS_BUCKET}/${S3_KUBECONFIG_PATH}"
                                 echo "> ✅ Upload complete."
                             }
                             

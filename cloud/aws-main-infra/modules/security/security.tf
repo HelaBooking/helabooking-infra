@@ -12,6 +12,13 @@ resource "aws_security_group" "bastion" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  ingress {
+    description     = "SSH from VPN Node"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.vpn.id]
+  }
 
   egress {
     from_port   = 0
@@ -45,6 +52,13 @@ resource "aws_security_group" "vpn" {
     to_port         = 22
     protocol        = "tcp"
     security_groups = [aws_security_group.bastion.id]
+  }
+  ingress {
+    description     = "SSH from VPN Node"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.vpn.id]
   }
 
   egress {
@@ -80,6 +94,13 @@ resource "aws_security_group" "k8s_common" {
     to_port         = 22
     protocol        = "tcp"
     security_groups = [aws_security_group.bastion.id]
+  }
+  ingress {
+    description     = "SSH from VPN Node"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.vpn.id]
   }
 
   # Allow API Server access from Bastion (for kubectl on bastion)
