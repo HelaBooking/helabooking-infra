@@ -98,6 +98,7 @@ pipeline {
                             echo "> 🗝️ SSH Key Name  : ${env.SSH_KEY_NAME}"
                             echo "> 📁 Project Name : ${env.PROJECT_NAME}"
                             echo "> 🟢 [2/5] Configuration Retrieved!"
+                        }
                     }
                 }
             }
