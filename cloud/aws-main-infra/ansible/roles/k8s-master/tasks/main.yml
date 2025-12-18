@@ -37,11 +37,11 @@
 - name: Download Cilium CLI
   become: false
   shell: |
-    CILIUM_CLI_VERSION= "{{ cilium_cli_version }}"
+    CILIUM_CLI_VERSION="{{ cilium_cli_version }}"
     CLI_ARCH=amd64
     if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi
     curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz
-    sudo tar xzvfC cilium-linux-${CLI_ARCH}.tar.gz /usr/local/bin
+    sudo tar xzvf cilium-linux-${CLI_ARCH}.tar.gz -C /usr/local/bin
     rm cilium-linux-${CLI_ARCH}.tar.gz
   args:
     creates: /usr/local/bin/cilium
@@ -72,16 +72,4 @@
       --secret-id "{{ bootstrap_secret_id }}" \
       --secret-string '{{ join_cmds_json.stdout }}' \
       --region {{ aws_region }}
-  when: not kube_conf.stat.exists
-
-# --- S3 BACKUP ---
-- name: Upload Kubeconfig to S3
-  delegate_to: localhost
-  become: false
-  shell: |
-    # Download conf from master to local temp using the ProxyJump
-    scp -o "ProxyCommand ssh -W %h:%p -i {{ ssh_key_path }} ubuntu@{{ hostvars[inventory_hostname]['ansible_ssh_common_args'].split('@')[1][:-1] }}" -i {{ ssh_key_path }} ubuntu@{{ inventory_hostname }}:/home/ubuntu/.kube/config /tmp/kubeconfig_{{ project_name }}
-
-    # Upload to S3
-    aws s3 cp /tmp/kubeconfig_{{ project_name }} s3://{{ s3_secrets_bucket }}/cloud/{{ project_name }}/kube-config.yaml
   when: not kube_conf.stat.exists

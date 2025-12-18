@@ -4,5 +4,14 @@
   hosts: masters
   become: true
   gather_facts: true
+
   roles:
     - k8s-master
+
+  # --- FETCH KUBECONFIG (ALWAYS RUNS) ---
+  post_tasks:
+    - name: Fetch Kubeconfig to Jenkins Agent
+      fetch:
+        src: /etc/kubernetes/admin.conf
+        dest: "/tmp/kubeconfig_{{ project_name }}"
+        flat: yes
