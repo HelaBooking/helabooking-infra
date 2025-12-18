@@ -2,24 +2,24 @@ pipeline {
     agent any
 
     parameters {
-        // 1. Git Parameter: Lists branches from the Repo
+        // Git Parameter: Lists branches from the Repo
         gitParameter(name: 'BRANCH_NAME', 
-                     type: 'PT_BRANCH', 
-                     defaultValue: 'origin/aws-main', 
-                     selectedValue: 'TOP', 
-                     sortMode: 'ASCENDING_SMART', 
-                     // FILTER: Only show branches starting with 'aws-'
-                     branchFilter: 'origin/(aws-.*)', 
-                     tagFilter: '*', 
-                     description: 'Select the Source Branch (e.g. aws-main). The job will automatically deploy to the Environment: <branch>-infra')
+                    type: 'PT_BRANCH', 
+                    defaultValue: 'origin/aws-main', 
+                    selectedValue: 'TOP', 
+                    sortMode: 'ASCENDING_SMART', 
+                    // FILTER: Only show branches starting with 'aws-'
+                    branchFilter: 'origin/(aws-.*)', 
+                    tagFilter: '*', 
+                    description: 'Select the Source Branch (e.g. aws-main). The job will automatically deploy to the Environment: <branch>-infra')
     }
 
     environment {
         // --- CONFIGURATION ---
-        AWS_REGION = 'ap-southeast-1'
         SECRETS_BUCKET = 'group9-secrets-bucket'
         
         // AWS Credentials
+        AWS_REGION = 'ap-southeast-1'
         AWS_ACCESS_KEY_ID = credentials('aws-access-key')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
 
@@ -37,7 +37,7 @@ pipeline {
                 // Checkout the selected branch (e.g., origin/aws-main)
                 checkout([$class: 'GitSCM', 
                     branches: [[name: "${params.BRANCH_NAME}"]], 
-                    userRemoteConfigs: [[credentialsId: 'github-creds', url: 'https://github.com/YOUR_USER/YOUR_REPO.git']]
+                    userRemoteConfigs: [[credentialsId: 'git-org-credentials', url: 'https://github.com/HelaBooking/helabooking-infra.git']]
                 ])
             }
         }
@@ -49,7 +49,12 @@ pipeline {
                         echo "> 🔃 [1/5] Installing Dependencies..."
                         apt-get update && apt-get install -y python3-pip python3-venv sshpass jq awscli
                         pip3 install ansible boto3 --break-system-packages
-                        echo "> 🟢 Tools Ready"
+
+                        # Setup AWS CLI:
+                        aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}
+                        aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}
+                        aws configure set default.region ${AWS_REGION}
+                        echo "> 🟢 [1/5] Tools Ready"
                     '''
                 }
             }
@@ -59,15 +64,16 @@ pipeline {
             steps {
                 ansiColor('xterm') {
                     script {
-                        // 1. Clean the branch name (remove 'origin/')
+                        echo "> 🔃 [2/5] Determining Environment Configuration..."
+                        // Clean the branch name (remove 'origin/')
                         // Input: "origin/aws-main" -> Output: "aws-main"
                         def cleanBranch = params.BRANCH_NAME.replace('origin/', '')
                         
-                        // 2. MAPPING LOGIC: Map branch to environment name
+                        // MAPPING LOGIC: Map branch to environment name
                         // "aws-main" -> "aws-main-infra"
                         env.ENV_NAME = "${cleanBranch}-infra"
                         
-                        // 3. Define S3 Paths based on the mapped name
+                        // Define S3 Paths based on the mapped name
                         env.S3_METADATA_PATH = "cloud/${env.ENV_NAME}/metadata.json"
                         env.S3_KUBECONFIG_PATH = "cloud/${env.ENV_NAME}/kube-config.yaml"
                         
@@ -77,16 +83,21 @@ pipeline {
                         echo "   S3 Metadata    : ${env.S3_METADATA_PATH}"
                         echo "============================================="
                         
-                        // 4. Download Metadata
+                        // Download Metadata
                         sh "aws s3 cp s3://${SECRETS_BUCKET}/${env.S3_METADATA_PATH} metadata.json"
                         
-                        // 5. Extract Secret ID & Project Name
+                        // Extract Secret ID & Project Name
                         env.SSH_SECRET_ID = sh(script: "jq -r '.ssh_secret_id' metadata.json", returnStdout: true).trim()
+                        env.SSH_KEY_NAME = sh(script: "jq -r '.ssh_key_name' metadata.json", returnStdout: true).trim()
                         env.PROJECT_NAME = sh(script: "jq -r '.project_name' metadata.json", returnStdout: true).trim()
                         
                         if (env.SSH_SECRET_ID == "null" || env.SSH_SECRET_ID == "") {
-                            error "❌ Metadata invalid: 'ssh_secret_id' missing. Is the infra provisioned for ${env.ENV_NAME}?"
-                        }
+                            error "❌ [2/5] Metadata invalid: 'ssh_secret_id' missing. Is the infra provisioned for ${env.ENV_NAME}?"
+                        } else {
+                            echo "> 🔑 SSH Secret ID: ${env.SSH_SECRET_ID}"
+                            echo "> 🗝️ SSH Key Name  : ${env.SSH_KEY_NAME}"
+                            echo "> 📁 Project Name : ${env.PROJECT_NAME}"
+                            echo "> 🟢 [2/5] Configuration Retrieved!"
                     }
                 }
             }
@@ -96,21 +107,22 @@ pipeline {
             steps {
                 ansiColor('xterm') {
                     sh '''
-                        echo "> 🔐 Fetching SSH Key from Secrets Manager..."
+                        echo "> 🔃 [3/5] Fetching SSH Key from Secrets Manager..."
                         mkdir -p keys
                         
                         aws secretsmanager get-secret-value \
                             --secret-id ${SSH_SECRET_ID} \
                             --region ${AWS_REGION} \
                             --query SecretString \
-                            --output text > keys/helabooking-cloud-k8s-node-key.pem
+                            --output text > keys/${SSH_KEY_NAME}
                         
-                        chmod 600 keys/helabooking-cloud-k8s-node-key.pem
+                        chmod 600 keys/${SSH_KEY_NAME}
                         
-                        if [ ! -s "keys/helabooking-cloud-k8s-node-key.pem" ]; then
-                            echo "❌ Error: Retrieved SSH key is empty."
+                        if [ ! -s "keys/${SSH_KEY_NAME}" ]; then
+                            echo "❌ [3/5] Error: Retrieved SSH key is empty."
                             exit 1
                         fi
+                        echo "> 🟢 [3/5] SSH Key Retrieved!"
                     '''
                 }
             }
@@ -121,13 +133,14 @@ pipeline {
                 ansiColor('xterm') {
                     dir('ansible') {
                         sh '''
-                            echo "> 🚀 Running Ansible: Setup Kubernetes Cluster..."
+                            echo "> 🔃 [4/5] Running Ansible: Setup Kubernetes Cluster..."
                             
                             # Ensure inventory script is executable
                             chmod +x inventory/dynamic_inventory.py
                             
                             # Run Playbook
                             ansible-playbook setup_cluster.yml
+                            echo "> 🟢 [4/5] Ansible Playbook Completed!"
                         '''
                     }
                 }
@@ -138,7 +151,7 @@ pipeline {
             steps {
                 ansiColor('xterm') {
                     script {
-                        echo "> 🔃 Syncing Kubeconfig..."
+                        echo "> 🔃 [5/5] Syncing Kubeconfig..."
                         
                         def localConfig = "/tmp/kubeconfig_${env.PROJECT_NAME}"
                         def s3Config = "s3_kubeconfig.yaml"
@@ -176,11 +189,13 @@ pipeline {
                             
                             sh "cp ${localConfig} ${finalConfig}"
                         } else {
-                            error "❌ Ansible did not fetch the kubeconfig."
+                            error "❌ [5/5] Ansible did not fetch the kubeconfig."
                         }
                         
+                        echo "> 🟢 [5/5] Kubeconfig Sync Complete!"
                         if (fileExists(finalConfig)) {
                             archiveArtifacts artifacts: finalConfig, allowEmptyArchive: false
+                            echo "> 📁 Kubeconfig archived as build artifact."
                         }
                     }
                 }
@@ -193,7 +208,7 @@ pipeline {
             echo "✅ Cluster Setup Complete for ${env.ENV_NAME}"
         }
         failure {
-            echo "❌ Cluster Setup Failed."
+            echo "❌ Cluster Setup Failed for ${env.ENV_NAME}"
         }
     }
 }
