@@ -57,6 +57,47 @@ resource "aws_iam_policy" "secrets_access" {
   })
 }
 
+# D. Node AWS Integration Policy for Master Nodes
+resource "aws_iam_role_policy" "node_aws_integration_master" {
+  name = "${var.project_name}-node-aws-integration-k8s-master-policy"
+  role = aws_iam_role.master.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:ModifyInstanceAttribute",
+          "ec2:DescribeTags",
+          "ec2:DescribeInstances"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+# E. Node AWS Integration Policy for Worker Nodes
+resource "aws_iam_role_policy" "node_aws_integration_worker" {
+  name = "${var.project_name}-node-aws-integration-k8s-worker-policy"
+  role = aws_iam_role.worker.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:ModifyInstanceAttribute",
+          "ec2:DescribeTags",
+          "ec2:DescribeInstances"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # --- Policy Attachments ---
 
 # Attach EBS CSI Driver Policy (Managed by AWS) to BOTH
