@@ -27,7 +27,7 @@
       replace:
         path: /etc/containerd/config.toml
         regexp: "registry.k8s.io/pause:3.8"
-        replace: "registry.k8s.io/pause:latest"
+        replace: "registry.k8s.io/pause:3.10.1"
 
     - name: Restart containerd
       systemd:
