@@ -1,0 +1,31 @@
+# Rollback Kubernetes Cluster Setup in case of failures
+---
+- name: Reset Kubernetes Cluster
+  hosts: masters:workers
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Reset Kubeadm (Force)
+      shell: kubeadm reset -f
+      ignore_errors: yes
+
+    - name: Remove API Endpoint hack from /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        regexp: ".*{{ k8s_api_endpoint }}"
+        state: absent
+
+    - name: Cleanup CNI Configuration
+      file:
+        path: /etc/cni/net.d
+        state: absent
+
+    - name: Cleanup Kube Configs
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /home/ubuntu/.kube
+        - /etc/kubernetes
+        - /var/lib/etcd
+        - /var/lib/kubelet

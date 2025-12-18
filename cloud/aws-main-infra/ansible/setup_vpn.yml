@@ -1,0 +1,8 @@
+# Setup WireGuard VPN on VPN Nodes
+---
+- name: Setup WireGuard VPN
+  hosts: vpn
+  become: true
+  gather_facts: true
+  roles:
+    - wireguard-setup

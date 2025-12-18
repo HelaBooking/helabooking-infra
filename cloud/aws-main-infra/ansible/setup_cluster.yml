@@ -1,0 +1,83 @@
+# Setup Kubernetes Cluster in Master Nodes
+---
+- name: Setup Kubernetes Cluster
+  hosts: masters
+  become: true
+  gather_facts: true
+
+  # --- PRE-TASKS TO CONFIGURE CONTAINERD AND KERNEL MODULES ---
+  pre_tasks:
+    # --- CONTAINER RUNTIME FIXES ---
+    - name: Create containerd config folder
+      file:
+        path: /etc/containerd
+        state: directory
+
+    - name: Generate default containerd config
+      shell: containerd config default > /etc/containerd/config.toml
+
+    - name: Enable SystemdCgroup in containerd
+      replace:
+        path: /etc/containerd/config.toml
+        regexp: "SystemdCgroup = false"
+        replace: "SystemdCgroup = true"
+
+    # FIX: Update Pause Image to match Kubeadm 1.34 requirements
+    - name: Update Sandbox Image (Pause Container)
+      replace:
+        path: /etc/containerd/config.toml
+        regexp: 'sandbox_image = ".*"'
+        replace: 'sandbox_image = "registry.k8s.io/pause:3.10.1"'
+
+    - name: Restart containerd
+      systemd:
+        name: containerd
+        state: restarted
+        enabled: yes
+
+    # FIX: Configure crictl so you can debug running containers
+    - name: Configure crictl
+      copy:
+        dest: /etc/crictl.yaml
+        content: |
+          runtime-endpoint: unix:///run/containerd/containerd.sock
+          image-endpoint: unix:///run/containerd/containerd.sock
+          timeout: 10
+          debug: false
+
+    # --- KERNEL MODULES ---
+    - name: Load br_netfilter module
+      modprobe:
+        name: br_netfilter
+        state: present
+
+    - name: Enable IPv4 forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: "1"
+        sysctl_set: yes
+        state: present
+        reload: yes
+
+    # This allows the Master to talk to itself locally using the NLB DNS name
+    - name: Add API Endpoint to /etc/hosts (Bypass NLB Loopback)
+      lineinfile:
+        path: /etc/hosts
+        line: "127.0.0.1 {{ k8s_api_endpoint }}"
+        state: present
+
+    # Pre-pull images to avoid timeouts during init
+    - name: Pre-pull Kubernetes Images
+      shell: kubeadm config images pull --kubernetes-version "{{ k8s_version }}"
+
+  # --- SETUP KUBERNETES MASTER ---
+  roles:
+    - k8s-master
+
+  # --- FETCH KUBECONFIG (ALWAYS RUNS) ---
+  post_tasks:
+    - name: Fetch Kubeconfig to Jenkins Agent
+      fetch:
+        src: /etc/kubernetes/admin.conf
+        dest: "/tmp/kubeconfig_{{ project_name }}"
+        flat: yes
