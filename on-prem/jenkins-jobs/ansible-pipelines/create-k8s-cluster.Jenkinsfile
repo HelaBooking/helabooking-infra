@@ -149,9 +149,9 @@ pipeline {
                                 // Prompt user whether to rollback
                                 def doRollback = input(
                                     message: "Bootstrap failed. Do you want to rollback the cluster?",
-                                    ok: "Proceed",
+                                    ok: "Continue",
                                     parameters: [
-                                        booleanParam(defaultValue: true, description: 'Rollback will reset nodes to clean state', name: 'ROLLBACK')
+                                        booleanParam(defaultValue: false, description: 'Rollback will reset nodes to clean state', name: 'ROLLBACK')
                                     ]
                                 )
                                 
