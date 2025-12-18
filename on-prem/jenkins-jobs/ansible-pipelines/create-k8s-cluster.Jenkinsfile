@@ -137,33 +137,33 @@ pipeline {
                     dir("cloud/${env.ENV_NAME}/ansible") {
                         script {
                             echo "> 🔃 Running Ansible: Setup Kubernetes Cluster..."
-
-                            def bootstrapStatus = sh(script: '''
+                            
+                            def status = sh(script: '''
                                 chmod +x inventory/dynamic_inventory.py
                                 ansible-playbook setup_cluster.yml
                             ''', returnStatus: true)
-
-                            if (bootstrapStatus != 0) {
-                                echo "❌ Ansible playbook failed!"
-
-                                // Ask user whether to rollback
-                                def rollbackDecision = input(
-                                    message: "The cluster bootstrap failed. Do you want to rollback?",
+        
+                            if (status != 0) {
+                                echo "❌ Ansible bootstrap failed!"
+                                
+                                // Prompt user whether to rollback
+                                def doRollback = input(
+                                    message: "Bootstrap failed. Do you want to rollback the cluster?",
                                     ok: "Proceed",
                                     parameters: [
-                                        booleanParam(defaultValue: false, description: 'Rollback will reset nodes to clean state', name: 'ROLLBACK')
+                                        booleanParam(defaultValue: true, description: 'Rollback will reset nodes to clean state', name: 'ROLLBACK')
                                     ]
                                 )
-
-                                if (rollbackDecision) {
+                                
+                                if (doRollback) {
                                     echo "⚠️ Rolling back cluster..."
                                     sh '''
                                         chmod +x inventory/dynamic_inventory.py
                                         ansible-playbook rollback_cluster.yml
                                     '''
-                                    error "Cluster rollback executed due to failure."
+                                    error "Cluster rollback executed due to bootstrap failure."
                                 } else {
-                                    echo "ℹ️ User chose to skip rollback. Investigate the failure manually."
+                                    echo "ℹ️ User chose to skip rollback. Investigate manually."
                                 }
                             } else {
                                 echo "> 🟢 Cluster bootstrap completed successfully."
