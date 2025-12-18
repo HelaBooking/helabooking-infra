@@ -42,14 +42,36 @@
   when: not kube_conf.stat.exists
 
 - name: Apply Calico Manifest
-  become: false
   command: kubectl apply -f /tmp/calico.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
   when: not kube_conf.stat.exists
+
+# --- METRICS SERVER SETUP ---
+- name: Download metrics-server manifest
+  get_url:
+    url: https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+    dest: /tmp/metrics-server.yaml
+    mode: "0644"
+
+- name: Patch metrics-server args for self-managed cluster
+  replace:
+    path: /tmp/metrics-server.yaml
+    regexp: "(- args:)"
+    replace: |
+      - args:
+        - --kubelet-insecure-tls
+        - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP
+
+- name: Apply metrics-server
+  command: kubectl apply -f /tmp/metrics-server.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
 
 # --- JOIN COMMANDS & SECRETS ---
 - name: Generate Join Commands JSON
   shell: |
-    echo "{\"master_join\": \"$(kubeadm token create --print-join-command) --control-plane --certificate-key $(kubeadm init phase upload-certs --upload-certs | tail -1)\", \"worker_join\": \"$(kubeadm token create --print-join-command)\"}"
+    echo "{\"master_join\": \"$(kubeadm token create --ttl 0 --print-join-command) --control-plane --certificate-key $(kubeadm init phase upload-certs --upload-certs | tail -1)\", \"worker_join\": \"$(kubeadm token create --print-join-command)\"}"
   register: join_cmds_json
   when: not kube_conf.stat.exists
 
