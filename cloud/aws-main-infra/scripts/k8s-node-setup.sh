@@ -46,6 +46,8 @@ if [ ! -z "$TAG_NAME" ] && [ "$TAG_NAME" != "None" ]; then
   hostnamectl set-hostname "$TAG_NAME"
   echo "127.0.0.1 $TAG_NAME" >> /etc/hosts
 fi
+echo "preserve_hostname: true" > /etc/cloud/cloud.cfg.d/99-preserve-hostname.cfg
+
 # -----------------------------------------------
 
 # 3. Disable Swap
@@ -112,12 +114,12 @@ cat <<EOF > /usr/local/bin/k8s-maintainer.sh
 #!/bin/bash
 
 check_if_joined() {
-    # Check if the join config exists and kubelet is active
-    if [[ -f "/etc/kubernetes/kubelet.conf" ]] && systemctl is-active --quiet kubelet; then
-        return 0 # Joined
-    else
-        return 1 # Not joined
+    if [[ ! -f /etc/kubernetes/kubelet.conf ]]; then
+        return 1
     fi
+
+    kubectl --kubeconfig=/etc/kubernetes/kubelet.conf \
+        get node "\$(hostname)" >/dev/null 2>&1
 }
 
 while true; do
@@ -141,9 +143,12 @@ while true; do
                 echo "\$(date): ✅ Valid join command found! Preparing node..."
                 
                 # 1. Clean up any stale state from previous clusters
-                kubeadm reset -f
-                rm -rf /etc/cni/net.d
-                iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
+                if ! kubectl --kubeconfig=/etc/kubernetes/kubelet.conf \
+                    get node "\$(hostname)" >/dev/null 2>&1; then
+                    echo "\$(date): Node not registered, safe to reset"
+                    kubeadm reset -f
+                    rm -rf /etc/cni/net.d
+                fi
                 
                 # 2. Execute the join command
                 echo "\$(date): Executing: \$JOIN_CMD"
