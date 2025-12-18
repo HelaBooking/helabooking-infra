@@ -9,6 +9,12 @@
       shell: kubeadm reset -f
       ignore_errors: yes
 
+    - name: Remove API Endpoint hack from /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        regexp: ".*{{ k8s_api_endpoint }}"
+        state: absent
+
     - name: Cleanup CNI Configuration
       file:
         path: /etc/cni/net.d

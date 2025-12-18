@@ -26,8 +26,8 @@
     - name: Update Sandbox Image (Pause Container)
       replace:
         path: /etc/containerd/config.toml
-        regexp: "registry.k8s.io/pause:3.8"
-        replace: "registry.k8s.io/pause:3.10.1"
+        regexp: 'sandbox_image = ".*"'
+        replace: 'sandbox_image = "registry.k8s.io/pause:3.10.1"'
 
     - name: Restart containerd
       systemd:
@@ -58,6 +58,17 @@
         sysctl_set: yes
         state: present
         reload: yes
+
+    # This allows the Master to talk to itself locally using the NLB DNS name
+    - name: Add API Endpoint to /etc/hosts (Bypass NLB Loopback)
+      lineinfile:
+        path: /etc/hosts
+        line: "127.0.0.1 {{ k8s_api_endpoint }}"
+        state: present
+
+    # Pre-pull images to avoid timeouts during init
+    - name: Pre-pull Kubernetes Images
+      shell: kubeadm config images pull --kubernetes-version "{{ k8s_version }}"
 
   # --- SETUP KUBERNETES MASTER ---
   roles:
