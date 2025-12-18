@@ -147,7 +147,6 @@ while true; do
                     get node "\$(hostname)" >/dev/null 2>&1; then
                     echo "\$(date): Node not registered, safe to reset"
                     kubeadm reset -f
-                    rm -rf /etc/cni/net.d
                 fi
                 
                 # 2. Execute the join command
@@ -156,7 +155,12 @@ while true; do
                 
                 if [ \$? -eq 0 ]; then
                     echo "\$(date): 🎉 Successfully joined the cluster!"
-                    systemctl restart kubelet
+                    sleep 5
+                    systemctl stop kubelet
+                    sleep 5
+                    systemctl restart containerd
+                    sleep 5
+                    systemctl start kubelet
                 else
                     echo "\$(date): ❌ Join failed. Will retry in next cycle."
                 fi
