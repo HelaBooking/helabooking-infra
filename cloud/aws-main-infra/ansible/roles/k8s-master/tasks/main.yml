@@ -47,38 +47,6 @@
     KUBECONFIG: /etc/kubernetes/admin.conf
   when: not kube_conf.stat.exists
 
-# --- METRICS SERVER SETUP ---
-# Download metrics-server manifest
-- name: Download metrics-server manifest
-  get_url:
-    url: https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-    dest: /tmp/metrics-server.yaml
-    mode: "0644"
-
-# Apply the manifest
-- name: Apply metrics-server manifest
-  command: kubectl apply -f /tmp/metrics-server.yaml
-  environment:
-    KUBECONFIG: /etc/kubernetes/admin.conf
-
-# Wait until deployment exists
-- name: Wait for metrics-server deployment
-  command: kubectl -n kube-system rollout status deployment metrics-server --timeout=120s
-  environment:
-    KUBECONFIG: /etc/kubernetes/admin.conf
-
-# Patch for self-managed cluster
-- name: Patch metrics-server deployment with kubelet args
-  command: >
-    kubectl -n kube-system patch deployment metrics-server
-    --type='json'
-    -p='[
-        {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value":"--kubelet-insecure-tls"},
-        {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value":"--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP"}
-    ]'
-  environment:
-    KUBECONFIG: /etc/kubernetes/admin.conf
-
 # --- JOIN COMMANDS & SECRETS ---
 - name: Generate Join Commands JSON
   shell: |
