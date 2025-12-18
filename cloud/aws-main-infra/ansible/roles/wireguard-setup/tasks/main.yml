@@ -1,0 +1,58 @@
+# WireGuard VPN Setup Tasks
+---
+- name: Install WireGuard
+  apt:
+    name:
+      - wireguard
+      - iptables-persistent
+      - qrencode
+    state: present
+    update_cache: yes
+
+- name: Enable IP Forwarding
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: Generate Server Keys (If not exists)
+  shell: |
+    wg genkey | tee /etc/wireguard/server_private.key | wg pubkey > /etc/wireguard/server_public.key
+    chmod 600 /etc/wireguard/server_private.key
+  args:
+    creates: /etc/wireguard/server_private.key
+
+- name: Read Server Private Key
+  slurp:
+    src: /etc/wireguard/server_private.key
+  register: server_priv_key
+
+- name: Configure WireGuard Interface (wg0)
+  template:
+    src: wg0.conf.j2
+    dest: /etc/wireguard/wg0.conf
+    mode: "0600"
+  vars:
+    private_key: "{{ server_priv_key['content'] | b64decode | trim }}"
+  notify: Restart WireGuard
+
+- name: Ensure WireGuard is running
+  systemd:
+    name: wg-quick@wg0
+    state: started
+    enabled: yes
+
+- name: Display Server Public Key
+  shell: cat /etc/wireguard/server_public.key
+  register: pub_key
+
+- debug:
+    msg: "VPN Server Public Key: {{ pub_key.stdout }}"
+
+- name: Create clients directory
+  file:
+    path: /etc/wireguard/clients
+    state: directory
+    mode: "0755"

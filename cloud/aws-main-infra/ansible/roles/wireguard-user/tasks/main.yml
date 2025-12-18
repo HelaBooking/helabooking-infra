@@ -1,0 +1,117 @@
+# Dynamically create WireGuard VPN user and generate configuration
+---
+- name: Check if user exists
+  stat:
+    path: "/etc/wireguard/clients/{{ vpn_username }}/{{ vpn_username }}.conf"
+  register: user_config
+
+- name: Create Client Config Script
+  copy:
+    dest: /usr/local/bin/add_wg_user.sh
+    mode: "0755"
+    content: |
+      #!/bin/bash
+
+      # INJECTED VARIABLES
+      SERVER_ENDPOINT="{{ vpn_public_ip }}:{{ wireguard_port }}"
+
+      # Your original script logic starts here
+      set -e
+      WG_DIR="/etc/wireguard"
+      WG_CONF="$WG_DIR/wg0.conf"
+      SERVER_PUBLIC_KEY=$(cat "$WG_DIR/server_public.key")
+      NETWORK="{{ wireguard_network_prefix }}"
+      DNS="{{ wireguard_dns }}"
+      MTU="1420"
+
+      RED='\033[0;31m'
+      GREEN='\033[0;32m'
+      YELLOW='\033[1;33m'
+      NC='\033[0m' 
+
+      if [[ $EUID -ne 0 ]]; then
+          echo -e "${RED}Error: This script must be run as root${NC}"
+          exit 1
+      fi
+
+      USERNAME=$1
+      if [ -z "$USERNAME" ]; then
+          echo -e "${RED}Error: Username is required${NC}"
+          exit 1
+      fi
+
+      CLIENT_DIR="$WG_DIR/clients"
+      CLIENT_KEYS_DIR="$CLIENT_DIR/$USERNAME"
+      mkdir -p "$CLIENT_KEYS_DIR"
+
+      # Generate client keys
+      wg genkey | tee "$CLIENT_KEYS_DIR/${USERNAME}_private.key" | wg pubkey > "$CLIENT_KEYS_DIR/${USERNAME}_public.key"
+      chmod 600 "$CLIENT_KEYS_DIR/${USERNAME}_private.key"
+
+      CLIENT_PRIVATE_KEY=$(cat "$CLIENT_KEYS_DIR/${USERNAME}_private.key")
+      CLIENT_PUBLIC_KEY=$(cat "$CLIENT_KEYS_DIR/${USERNAME}_public.key")
+
+      # Find next available IP
+      USED_IPS=$(grep -oP 'AllowedIPs = \K[0-9.]+' "$WG_CONF" | cut -d'.' -f4 | cut -d'/' -f1 | sort -n)
+      NEXT_IP=2
+      for ip in $USED_IPS; do
+          if [ $ip -eq $NEXT_IP ]; then
+              NEXT_IP=$((NEXT_IP + 1))
+          fi
+      done
+
+      CLIENT_IP="$NETWORK.$NEXT_IP"
+
+      # Add peer to server configuration
+      cat >> "$WG_CONF" << EOF
+
+      [Peer]
+      # $USERNAME
+      PublicKey = $CLIENT_PUBLIC_KEY
+      AllowedIPs = $CLIENT_IP/32
+      EOF
+
+      # Restart WireGuard
+      wg syncconf wg0 <(wg-quick strip wg0)
+
+      # Create client configuration file
+      CLIENT_CONF="$CLIENT_KEYS_DIR/${USERNAME}.conf"
+      cat > "$CLIENT_CONF" << EOF
+      [Interface]
+      PrivateKey = $CLIENT_PRIVATE_KEY
+      Address = $CLIENT_IP/32
+      DNS = $DNS
+      MTU = $MTU
+
+      [Peer]
+      PublicKey = $SERVER_PUBLIC_KEY
+      Endpoint = $SERVER_ENDPOINT
+      # Routing Split Tunnel (VPC CIDR + Cluster CIDR + WireGuard Network)
+      AllowedIPs = {{ vpc_cidr }}, {{ wireguard_network_prefix }}.0/24
+      PersistentKeepalive = 25
+      EOF
+
+      chmod 600 "$CLIENT_CONF"
+
+      # Output config to stdout for Ansible capture
+      cat "$CLIENT_CONF"
+
+- name: Run User Creation Script
+  shell: "/usr/local/bin/add_wg_user.sh {{ vpn_username }}"
+  register: script_output
+  when: not user_config.stat.exists
+
+- name: Display New User Config
+  debug:
+    msg: "{{ script_output.stdout_lines }}"
+  when: not user_config.stat.exists
+
+- name: Read Existing Config (If user existed)
+  shell: "cat /etc/wireguard/clients/{{ vpn_username }}/{{ vpn_username }}.conf"
+  register: existing_user_conf
+  when: user_config.stat.exists
+
+- name: Display Existing User Config
+  debug:
+    msg: "{{ existing_user_conf.stdout_lines }}"
+  when: user_config.stat.exists

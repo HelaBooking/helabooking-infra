@@ -1,0 +1,32 @@
+# Setup WireGuard VPN User on VPN Nodes
+---
+- name: Create WireGuard VPN User
+  hosts: vpn
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - ../metadata.json
+
+  vars:
+    # Default to 'testuser' if not provided via -e "vpn_username=..."
+    vpn_username: "{{ vpn_username | default('testuser') }}"
+
+  pre_tasks:
+    - name: Ensure required variables are defined
+      assert:
+        that:
+          - vpc_cidr is defined
+          - vpn_public_ip is defined
+        fail_msg: "Required metadata variables are missing. Check metadata.json loading."
+
+  roles:
+    - wireguard-user
+
+  # Send the config file back to Jenkins Agent
+  post_tasks:
+    - name: Fetch VPN client config to Jenkins Agent
+      fetch:
+        src: "/etc/wireguard/clients/{{ vpn_username }}/{{ vpn_username }}.conf"
+        dest: "tmp/vpn-users/{{ vpn_username }}.conf" # relative to workspace
+        flat: yes

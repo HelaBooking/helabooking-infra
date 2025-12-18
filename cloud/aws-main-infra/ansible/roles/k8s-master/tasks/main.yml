@@ -1,0 +1,65 @@
+# Handle Kubeadm Initialization and Cilium CNI Setup on Kubernetes Master Nodes
+# Push Join Commands to AWS Secrets Manager
+---
+- name: Check if cluster is already initialized
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: kube_conf
+
+- name: Initialize Kubernetes Master
+  shell: |
+    kubeadm init \
+      --control-plane-endpoint "{{ k8s_api_endpoint }}:6443" \
+      --kubernetes-version "{{ k8s_version }}" \
+      --pod-network-cidr "{{ k8s_pod_network_cidr }}" \
+      --upload-certs \
+      --ignore-preflight-errors=NumCPU
+  register: kubeadm_output
+  when: not kube_conf.stat.exists
+
+- name: Create .kube directory
+  file:
+    path: /home/ubuntu/.kube
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: "0755"
+
+- name: Copy admin.conf to user home
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/ubuntu/.kube/config
+    remote_src: yes
+    owner: ubuntu
+    group: ubuntu
+
+# --- CALICO CNI SETUP (Replacing Cilium) ---
+- name: Download Calico Manifest
+  get_url:
+    url: https://raw.githubusercontent.com/projectcalico/calico/v3.30.5/manifests/calico.yaml
+    dest: /tmp/calico.yaml
+    mode: "0644"
+  when: not kube_conf.stat.exists
+
+- name: Apply Calico Manifest
+  command: kubectl apply -f /tmp/calico.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  when: not kube_conf.stat.exists
+
+# --- JOIN COMMANDS & SECRETS ---
+- name: Generate Join Commands JSON
+  shell: |
+    echo "{\"master_join\": \"$(kubeadm token create --ttl 0 --print-join-command) --control-plane --certificate-key $(kubeadm init phase upload-certs --upload-certs | tail -1)\", \"worker_join\": \"$(kubeadm token create --print-join-command)\"}"
+  register: join_cmds_json
+  when: not kube_conf.stat.exists
+
+- name: Update AWS Secret with Join Commands
+  delegate_to: localhost
+  become: false
+  shell: |
+    aws secretsmanager put-secret-value \
+      --secret-id "{{ bootstrap_secret_id }}" \
+      --secret-string '{{ join_cmds_json.stdout }}' \
+      --region {{ aws_region }}
+  when: not kube_conf.stat.exists
