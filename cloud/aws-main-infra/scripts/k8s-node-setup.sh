@@ -23,31 +23,27 @@ unzip -q awscliv2.zip
 ./aws/install
 
 # --- AWS INTEGRATION: SOURCE/DEST & HOSTNAME ---
-# Use $$ for Bash variables so Terraform ignores them
-TOKEN=$$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
-INSTANCE_ID=$$(curl -s -H "X-aws-ec2-metadata-token: $$TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
-REGION=$$(curl -s -H "X-aws-ec2-metadata-token: $$TOKEN" http://169.254.169.254/latest/meta-data/placement/region)
+# Use single $ but ensure they aren't part of a { } pair that Terraform might grab.
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+REGION=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/region)
 
-# 1. Disable Source/Dest Check (Required for Calico)
-aws ec2 modify-instance-attribute --instance-id "$$INSTANCE_ID" --no-source-dest-check --region "$$REGION"
+# 1. Disable Source/Dest Check
+aws ec2 modify-instance-attribute --instance-id "$INSTANCE_ID" --no-source-dest-check --region "$REGION"
 
 # 2. Fetch Name Tag and Set Hostname
-TAG_NAME=$$(aws ec2 describe-tags \
-  --filters "Name=resource-id,Values=$$INSTANCE_ID" "Name=key,Values=Name" \
-  --region "$$REGION" --query 'Tags[0].Value' --output text)
+TAG_NAME=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$INSTANCE_ID" "Name=key,Values=Name" --region "$REGION" --query 'Tags[0].Value' --output text)
 
-# Make TAG unique by appending Last two parts of local IPv4
-LOCAL_IPV4=$$(curl -s -H "X-aws-ec2-metadata-token: $$TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4)
-IP_SUFFIX=$$(echo "$$LOCAL_IPV4" | awk -F. '{print $$(NF-1)"-"$$NF}')
-TAG_NAME="$${TAG_NAME}-$${IP_SUFFIX}"
+# Use standard shell variable expansion for the suffix
+LOCAL_IPV4=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4)
+IP_SUFFIX=$(echo "$LOCAL_IPV4" | awk -F. '{print $(NF-1)"-"$NF}')
 
-if [ ! -z "$$TAG_NAME" ] && [ "$$TAG_NAME" != "None" ]; then
-  # Set the OS hostname
-  hostnamectl set-hostname "$$TAG_NAME"
-  
-  # Update /etc/hosts to prevent sudo/init delays
-  echo "127.0.0.1 $$TAG_NAME" >> /etc/hosts
-  echo "Hostname updated to $$TAG_NAME"
+# IMPORTANT: Ensure this specific line uses single $ for the shell
+TAG_NAME="$TAG_NAME-$IP_SUFFIX"
+
+if [ ! -z "$TAG_NAME" ] && [ "$TAG_NAME" != "None" ]; then
+  hostnamectl set-hostname "$TAG_NAME"
+  echo "127.0.0.1 $TAG_NAME" >> /etc/hosts
 fi
 # -----------------------------------------------
 
