@@ -1,7 +1,6 @@
 # Templates to be used for DNS record management (Route53 and/or Cloudflare)
 
 ############################## Route53 (optional) ##############################
-
 resource "aws_route53_record" "route53_standard" {
   count = var.enable_route53 && var.route53_alias == null ? 1 : 0
 

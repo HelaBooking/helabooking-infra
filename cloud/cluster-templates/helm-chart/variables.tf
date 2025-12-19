@@ -1,12 +1,10 @@
 # Variables used in templates
 
-
 ## For Namespaces
 variable "namespace" {
   description = "Kubernetes namespace name"
   type        = string
 }
-
 
 ## For Helm Charts
 variable "chart_name" {

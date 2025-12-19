@@ -4,7 +4,6 @@ variable "namespace" {
   type        = string
   default     = "management"
 }
-
 variable "aws_region" {
   description = "AWS region for Route53 and other AWS resources"
   type        = string
@@ -17,32 +16,57 @@ variable "cf_default_root_domain" {
   type        = string
   default     = "hela.ezbooking.lk"
 }
-
+variable "cf_default_internal_domain" {
+  description = "Internal domain for the management services (used for internal DNS records)"
+  type        = string
+  default     = "internal.hela.ezbooking.lk"
+}
 variable "create_route53_hosted_zone" {
   description = "Whether to create a Route53 hosted zone for cf_default_root_domain"
   type        = bool
   default     = true
 }
 
+variable "existing_route53_zone_id" {
+  description = "Existing Route53 hosted zone ID to use when create_route53_hosted_zone=false"
+  type        = string
+  default     = null
+}
+
+variable "private_alb_dns_name" {
+  description = "DNS name of the private ALB created by AWS Load Balancer Controller (used for Route53 alias records)"
+  type        = string
+  default     = null
+}
+
+variable "private_alb_zone_id" {
+  description = "Hosted zone ID of the private ALB (used for Route53 alias records)"
+  type        = string
+  default     = null
+}
+
+variable "harbor_alb_dns_name" {
+  description = "DNS name of the Harbor ALB (if Harbor creates its own ALB ingress)"
+  type        = string
+  default     = null
+}
+
+variable "harbor_alb_zone_id" {
+  description = "Hosted zone ID of the Harbor ALB"
+  type        = string
+  default     = null
+}
+
+variable "private_ingress_class_name" {
+  description = "Kubernetes IngressClass name to use for the shared private ALB ingress"
+  type        = string
+  default     = "alb-private"
+}
 variable "enable_cloudflare_delegation" {
   description = "If true, creates NS records in Cloudflare to delegate to the Route53 hosted zone"
   type        = bool
-  default     = false
+  default     = true
 }
-
-variable "cloudflare_api_token" {
-  description = "Cloudflare API token (required if enable_cloudflare_delegation=true)"
-  type        = string
-  default     = null
-  sensitive   = true
-}
-
-variable "cloudflare_parent_zone_id" {
-  description = "Cloudflare Zone ID for the parent zone (e.g., ezbooking.lk) where the NS delegation record will be created"
-  type        = string
-  default     = null
-}
-
 variable "cloudflare_delegation_record_name" {
   description = "The NS record name in Cloudflare for delegation (typically the subdomain label, e.g., 'management')"
   type        = string
@@ -100,14 +124,10 @@ variable "jenkins_agent_config" {
 agent:
   podName: "jenkins-agent"
   # Max Number of agents
-  containerCap: 1
-  
-  # Node Selection 
-  nodeSelector:
-    kubernetes.io/hostname: "galaxy-node"
-  
+  containerCap: 4
+    
   # Agent Lifecycle
-  idleMinutes: 10080
+  idleMinutes: 5000
   
   # Permissions & Networking
   hostNetworking: false
@@ -205,12 +225,22 @@ variable "fluentbit_config_filters" {
 [FILTER]
     Name                rewrite_tag
     Match               kube.*
-    Rule                $kubernetes['namespace_name'] ^(management)$ opensearch.management false
+    Rule                $kubernetes['namespace_name'] ^(management)$ opensearch.cloud.management false
     
-# Route 'env-dev' namespace to the DEV tag
+# Route 'env-stage' namespace to the STAGE tag
 [FILTER]
     Name                rewrite_tag
     Match               kube.*
-    Rule                $kubernetes['namespace_name'] ^(env-dev)$ opensearch.dev false
+    Rule                $kubernetes['namespace_name'] ^(env-stage)$ opensearch.cloud.stage false
+# Route 'env-prod-a' namespace to the PROD-A tag
+[FILTER]
+    Name                rewrite_tag
+    Match               kube.*
+    Rule                $kubernetes['namespace_name'] ^(env-prod-a)$ opensearch.cloud.prod-a false
+# Route 'env-prod-b' namespace to the PROD-B tag
+[FILTER]
+    Name                rewrite_tag
+    Match               kube.*
+    Rule                $kubernetes['namespace_name'] ^(env-prod-b)$ opensearch.cloud.prod-b false
 EOT
 }

@@ -10,10 +10,6 @@
 # + Fluent Bit
 # + Istio Base Components
 
-# - Hashicorp Vault
-# - WSO2 Identity Server (Optional)
-# - Ansible (Outside of cluster)
-
 
 ################################ Cluster Resources ################################
 
@@ -27,7 +23,7 @@ resource "kubernetes_storage_class" "ebs_gp3" {
   }
 
   storage_provisioner    = "ebs.csi.aws.com"
-  reclaim_policy         = "Delete"
+  reclaim_policy         = "Retain"
   volume_binding_mode    = "WaitForFirstConsumer"
   allow_volume_expansion = true
 
@@ -42,34 +38,31 @@ module "alb_ingress_class_public" {
   source      = "../cluster-templates/manifest"
   api_version = "networking.k8s.io/v1"
   kind        = "IngressClass"
-
   metadata = {
     name = "alb-public"
     annotations = {
       "ingressclass.kubernetes.io/is-default-class" = "true"
     }
   }
-
   manifest_body = <<EOT
 spec:
   controller: ingress.k8s.aws/alb
 EOT
 }
-
 module "alb_ingress_class_private" {
   source      = "../cluster-templates/manifest"
   api_version = "networking.k8s.io/v1"
   kind        = "IngressClass"
-
   metadata = {
     name = "alb-private"
   }
-
   manifest_body = <<EOT
 spec:
   controller: ingress.k8s.aws/alb
 EOT
 }
+
+
 # Deploying Cert-Manager
 module "cert_manager_helm" {
   source = "../cluster-templates/helm-chart"
@@ -83,33 +76,13 @@ module "cert_manager_helm" {
     { name = "crds.enabled", value = "true" },
     { name = "crds.keep", value = "true" },
     { name = "replicaCount", value = "1" },
-    { name = "resources.limits.cpu", value = "400m" },
+    { name = "resources.limits.cpu", value = "500m" },
     { name = "resources.limits.memory", value = "256Mi" },
-    { name = "resources.requests.cpu", value = "50m" },
+    { name = "resources.requests.cpu", value = "100m" },
     { name = "resources.requests.memory", value = "100Mi" }
   ]
   depends_on_resource = [kubernetes_namespace.cert_manager]
 }
-# Deploying Rancher Server
-# module "rancher_helm" {
-#   source = "../cluster-templates/helm-chart"
-
-#   chart_name       = "rancher"
-#   chart_repository = "https://releases.rancher.com/server-charts/latest"
-#   chart            = "rancher"
-#   namespace        = kubernetes_namespace.rancher.metadata[0].name
-#   chart_version    = var.rancher_version
-#   set_values = [
-#     { name = "hostname", value = var.rancher_hostname },
-#     { name = "replicas", value = "1" },
-#     { name = "ingress.tls.source", value = "rancher" },
-#     { name = "resources.requests.cpu", value = "400m" },
-#     { name = "resources.requests.memory", value = "256Mi" }
-#   ]
-#   depends_on_resource = [kubernetes_namespace.rancher, module.cert_manager_helm, module.traefik_helm]
-# }
-
-
 
 
 ################################ Project Resources ################################
@@ -131,8 +104,7 @@ module "jenkins_helm" {
     { name = "controller.resources.limits.cpu", value = "1000m" },
     { name = "controller.resources.limits.memory", value = "2Gi" },
     { name = "persistence.existingClaim", value = "jenkins-pvc" },
-    { name = "controller.nodeSelector.kubernetes\\.io/hostname", value = var.jenkins_controller_node_selector_hostname },
-    { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
+    { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_internal_domain}/" },
     # Agent configs - Defined in the custom_values variable
     # Plugins
     {
@@ -166,17 +138,6 @@ module "harbor_helm" {
     { name = "externalURL", value = "https://harbor.${var.cf_default_root_domain}" },
     { name = "expose.ingress.hosts.core", value = "harbor.${var.cf_default_root_domain}" },
     { name = "harborAdminPassword", value = var.harbor_admin_password },
-    # Force to schedule on amd64 node, since harbor images are not available for arm64 architecture
-    { name = "nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
-    { name = "nginx.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
-    { name = "portal.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
-    { name = "core.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
-    { name = "jobservice.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
-    { name = "registry.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
-    { name = "trivy.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
-    { name = "database.internal.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
-    { name = "redis.internal.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
-    { name = "exporter.nodeSelector.kubernetes\\.io/hostname", value = "galaxy-node" },
     # PVCs used in harbor
     { name = "persistence.persistentVolumeClaim.registry.existingClaim", value = "harbor-registry-pvc" },
     { name = "persistence.persistentVolumeClaim.database.existingClaim", value = "harbor-database-pvc" },
@@ -185,7 +146,7 @@ module "harbor_helm" {
     { name = "persistence.persistentVolumeClaim.trivy.existingClaim", value = "harbor-trivy-pvc" },
     # Resource limits
     { name = "resources.limits.cpu", value = "1000m" },
-    { name = "resources.limits.memory", value = "1Gi" }
+    { name = "resources.limits.memory", value = "2Gi" }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.cert_manager_helm, module.harbor_registry_pvc, module.harbor_database_pvc, module.harbor_jobservice_pvc, module.harbor_redis_pvc, module.harbor_trivy_pvc]
 }
@@ -200,16 +161,17 @@ module "argocd_helm" {
   namespace        = kubernetes_namespace.management.metadata[0].name
   chart_version    = var.argocd_version
   set_values = [
-    { name = "global.domain", value = "argocd.${var.cf_default_root_domain}" },
+    { name = "global.domain", value = "argocd.${var.cf_default_internal_domain}" },
     { name = "server.ingress.enabled", value = "false" },
+    { name = "configs.params.server.insecure", value = "true" },
     { name = "configs.secret.argocdServerAdminPassword", value = var.argocd_admin_password_hash },
-    { name = "server.resources.requests.cpu", value = "100m" },
-    { name = "server.resources.requests.memory", value = "256Mi" },
+    { name = "server.resources.requests.cpu", value = "400m" },
+    { name = "server.resources.requests.memory", value = "512Mi" },
     # Forces ArgoCD to mark Ingress as "Healthy" even without an IP address
-    {
-      name  = "configs.cm.resource\\.customizations\\.health\\.networking\\.k8s\\.io_Ingress"
-      value = "hs = {}\nhs.status = \"Healthy\"\nhs.message = \"Ingress is Healthy (IP check bypassed for ClusterIP)\"\nreturn hs"
-    }
+    # {
+    #   name  = "configs.cm.resource\\.customizations\\.health\\.networking\\.k8s\\.io_Ingress"
+    #   value = "hs = {}\nhs.status = \"Healthy\"\nhs.message = \"Ingress is Healthy (IP check bypassed for ClusterIP)\"\nreturn hs"
+    # }
   ]
   depends_on_resource = [kubernetes_namespace.management, module.cert_manager_helm]
 }
@@ -225,10 +187,10 @@ module "fluentbit_helm" {
   chart_version    = var.fluentbit_version
 
   set_values = [
-    { name = "resources.requests.cpu", value = "50m" },
-    { name = "resources.requests.memory", value = "64Mi" },
-    { name = "resources.limits.cpu", value = "200m" },
-    { name = "resources.limits.memory", value = "128Mi" },
+    { name = "resources.requests.cpu", value = "100m" },
+    { name = "resources.requests.memory", value = "100Mi" },
+    { name = "resources.limits.cpu", value = "400m" },
+    { name = "resources.limits.memory", value = "512Mi" },
     { name = "config.service", value = var.fluentbit_config_service },
     { name = "config.inputs", value = var.fluentbit_config_inputs },
     { name = "config.filters", value = var.fluentbit_config_filters },
