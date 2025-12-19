@@ -43,5 +43,5 @@ module "management_private_ingress" {
     }
   ]
 
-  depends_on_resource = [module.alb_ingress_class_private, module.cert_manager_helm]
+  depends_on_resource = var.enable_aws_load_balancer_controller ? [module.alb_ingress_class_private, module.aws_load_balancer_controller_helm[0]] : [module.alb_ingress_class_private]
 }

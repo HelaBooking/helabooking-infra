@@ -10,6 +10,18 @@ variable "aws_region" {
   default     = "ap-southeast-1"
 }
 
+variable "aws_cluster_name" {
+  description = "Kubernetes cluster name (used by AWS Load Balancer Controller for tagging and discovery)"
+  type        = string
+  default     = "helabooking-cloud"
+}
+
+variable "aws_vpc_id" {
+  description = "AWS VPC ID where the cluster nodes run (required by AWS Load Balancer Controller in non-EKS clusters)"
+  type        = string
+  default     = "vpc-0da0248a3e879a08b" # helabooking-cloud-vpc
+}
+
 # DNS / Domain configurations
 variable "cf_default_root_domain" {
   description = "Root domain for the management services (used as Route53 hosted zone name)"
@@ -33,7 +45,7 @@ variable "existing_route53_zone_id" {
   default     = null
 
   validation {
-    condition     = var.create_route53_hosted_zone || (var.existing_route53_zone_id != null && trim(var.existing_route53_zone_id) != "")
+    condition     = var.create_route53_hosted_zone || (var.existing_route53_zone_id != null && trimspace(var.existing_route53_zone_id) != "")
     error_message = "When create_route53_hosted_zone is false, existing_route53_zone_id must be set."
   }
 }
@@ -52,7 +64,7 @@ variable "private_alb_zone_id" {
   validation {
     condition = (
       (var.private_alb_dns_name == null && var.private_alb_zone_id == null) ||
-      (var.private_alb_dns_name != null && trim(var.private_alb_dns_name) != "" && var.private_alb_zone_id != null && trim(var.private_alb_zone_id) != "")
+      (var.private_alb_dns_name != null && trimspace(var.private_alb_dns_name) != "" && var.private_alb_zone_id != null && trimspace(var.private_alb_zone_id) != "")
     )
     error_message = "private_alb_dns_name and private_alb_zone_id must be set together (both null or both non-empty)."
   }
@@ -72,7 +84,7 @@ variable "harbor_alb_zone_id" {
   validation {
     condition = (
       (var.harbor_alb_dns_name == null && var.harbor_alb_zone_id == null) ||
-      (var.harbor_alb_dns_name != null && trim(var.harbor_alb_dns_name) != "" && var.harbor_alb_zone_id != null && trim(var.harbor_alb_zone_id) != "")
+      (var.harbor_alb_dns_name != null && trimspace(var.harbor_alb_dns_name) != "" && var.harbor_alb_zone_id != null && trimspace(var.harbor_alb_zone_id) != "")
     )
     error_message = "harbor_alb_dns_name and harbor_alb_zone_id must be set together (both null or both non-empty)."
   }
@@ -106,6 +118,26 @@ variable "aws_ebs_csi_driver_version" {
   description = "Version of the aws-ebs-csi-driver Helm chart"
   type        = string
   default     = "2.54.1"
+}
+
+variable "aws_load_balancer_controller_version" {
+  description = "Version of the aws-load-balancer-controller Helm chart"
+  type        = string
+  default     = "1.16.0"
+}
+
+variable "enable_aws_load_balancer_controller" {
+  description = "Whether to install AWS Load Balancer Controller"
+  type        = bool
+  default     = true
+
+  validation {
+    condition = (
+      !var.enable_aws_load_balancer_controller ||
+      (var.aws_cluster_name != null && trimspace(var.aws_cluster_name) != "" && var.aws_vpc_id != null && trimspace(var.aws_vpc_id) != "")
+    )
+    error_message = "When enable_aws_load_balancer_controller is true, aws_cluster_name and aws_vpc_id must be set."
+  }
 }
 
 variable "cert_manager_version" {

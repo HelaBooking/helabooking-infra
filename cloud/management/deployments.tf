@@ -27,9 +27,31 @@ module "aws_ebs_csi_driver_helm" {
   set_values = [
     { name = "controller.serviceAccount.create", value = "true" },
     { name = "node.serviceAccount.create", value = "true" },
+  ]
+}
 
-    # Avoid installing snapshot controller/CRDs implicitly.
-    { name = "snapshotController.enabled", value = "false" }
+# AWS Load Balancer Controller (required for ALB provisioning from Ingress)
+module "aws_load_balancer_controller_helm" {
+  source = "../cluster-templates/helm-chart"
+
+  count = var.enable_aws_load_balancer_controller ? 1 : 0
+
+  chart_name       = "aws-load-balancer-controller"
+  chart_repository = "https://aws.github.io/eks-charts"
+  chart            = "aws-load-balancer-controller"
+  namespace        = "kube-system"
+  chart_version    = var.aws_load_balancer_controller_version
+
+  # For self-managed clusters, controller can use node instance profile credentials.
+  set_values = [
+    { name = "clusterName", value = var.aws_cluster_name },
+    { name = "region", value = var.aws_region },
+    { name = "vpcId", value = var.aws_vpc_id },
+    { name = "serviceAccount.create", value = "true" },
+    { name = "serviceAccount.name", value = "aws-load-balancer-controller" },
+
+    # Reduce webhook/cert friction; chart manages its own webhook by default.
+    { name = "replicaCount", value = "1" }
   ]
 }
 
@@ -70,6 +92,8 @@ module "alb_ingress_class_public" {
 spec:
   controller: ingress.k8s.aws/alb
 EOT
+
+  depends_on_resource = var.enable_aws_load_balancer_controller ? [module.aws_load_balancer_controller_helm[0]] : []
 }
 module "alb_ingress_class_private" {
   source      = "../cluster-templates/manifest"
@@ -82,6 +106,8 @@ module "alb_ingress_class_private" {
 spec:
   controller: ingress.k8s.aws/alb
 EOT
+
+  depends_on_resource = var.enable_aws_load_balancer_controller ? [module.aws_load_balancer_controller_helm[0]] : []
 }
 
 
@@ -158,6 +184,17 @@ module "harbor_helm" {
   set_values = [
     { name = "imagePullPolicy", value = "Always" },
     { name = "externalURL", value = "https://harbor.${var.cf_default_root_domain}" },
+    # Use ALB for Harbor (public) and terminate TLS at the ALB with ACM
+    { name = "expose.type", value = "ingress" },
+    { name = "expose.tls.enabled", value = "false" },
+    { name = "expose.ingress.className", value = "alb-public" },
+    { name = "expose.ingress.annotations.kubernetes\\.io/ingress\\.class", value = "alb-public" },
+    { name = "expose.ingress.annotations.alb\\.ingress\\.kubernetes\\.io/scheme", value = "internet-facing" },
+    { name = "expose.ingress.annotations.alb\\.ingress\\.kubernetes\\.io/target-type", value = "ip" },
+    { name = "expose.ingress.annotations.alb\\.ingress\\.kubernetes\\.io/listen-ports", value = "[{\"HTTP\":80},{\"HTTPS\":443}]" },
+    { name = "expose.ingress.annotations.alb\\.ingress\\.kubernetes\\.io/certificate-arn", value = aws_acm_certificate_validation.wildcard.certificate_arn },
+    { name = "expose.ingress.annotations.alb\\.ingress\\.kubernetes\\.io/ssl-redirect", value = "443" },
+    { name = "expose.ingress.annotations.alb\\.ingress\\.kubernetes\\.io/backend-protocol", value = "HTTP" },
     { name = "expose.ingress.hosts.core", value = "harbor.${var.cf_default_root_domain}" },
     { name = "harborAdminPassword", value = var.harbor_admin_password },
     # PVCs used in harbor
@@ -170,7 +207,7 @@ module "harbor_helm" {
     { name = "resources.limits.cpu", value = "1000m" },
     { name = "resources.limits.memory", value = "2Gi" }
   ]
-  depends_on_resource = [kubernetes_namespace.management, module.cert_manager_helm, module.harbor_registry_pvc, module.harbor_database_pvc, module.harbor_jobservice_pvc, module.harbor_redis_pvc, module.harbor_trivy_pvc]
+  depends_on_resource = [kubernetes_namespace.management, module.cert_manager_helm, aws_acm_certificate_validation.wildcard, module.harbor_registry_pvc, module.harbor_database_pvc, module.harbor_jobservice_pvc, module.harbor_redis_pvc, module.harbor_trivy_pvc]
 }
 
 # Deploying ArgoCD

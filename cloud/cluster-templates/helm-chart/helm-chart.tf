@@ -6,6 +6,11 @@ resource "helm_release" "helm_chart_template" {
   namespace  = var.namespace
   version    = var.chart_version
 
+  timeout         = var.timeout_seconds
+  wait            = var.wait
+  atomic          = var.atomic
+  cleanup_on_fail = var.cleanup_on_fail
+
   values = [
     var.custom_values
   ]

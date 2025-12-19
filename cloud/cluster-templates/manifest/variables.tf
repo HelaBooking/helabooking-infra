@@ -1,10 +1,9 @@
 # Variables used in templates
 
-## For Namespaces (legacy; not used by this module)
+## For Namespaces
 variable "namespace" {
-  description = "Kubernetes namespace name (unused; kept for backward compatibility)"
+  description = "Kubernetes namespace name"
   type        = string
-  default     = null
 }
 
 ## For Manifests
@@ -20,7 +19,7 @@ variable "metadata" {
   description = "Metadata for the Kubernetes resource"
   type = object({
     name        = string
-    namespace   = optional(string)
+    namespace   = string
     labels      = optional(map(string))
     annotations = optional(map(string))
   })

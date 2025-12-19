@@ -38,6 +38,30 @@ variable "custom_values" {
   type        = string
   default     = ""
 }
+
+variable "timeout_seconds" {
+  description = "Helm operation timeout in seconds"
+  type        = number
+  default     = 1200
+}
+
+variable "wait" {
+  description = "Whether to wait for resources to be ready before marking the release successful"
+  type        = bool
+  default     = true
+}
+
+variable "atomic" {
+  description = "If set, the installation process deletes the installation on failure"
+  type        = bool
+  default     = false
+}
+
+variable "cleanup_on_fail" {
+  description = "Allow deletion of new resources created in this upgrade when upgrade fails"
+  type        = bool
+  default     = true
+}
 variable "depends_on_resource" {
   description = "Resource that this service depends on"
   type        = any
