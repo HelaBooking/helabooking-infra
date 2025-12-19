@@ -1,114 +1,117 @@
-############################## Route53 (optional) ##############################
-variable "enable_route53" {
-  description = "If true, manage a Route53 record"
+# Variables used in templates
+variable "enable_proxy" {
+  description = "Enable NGINX Proxy Manager for the DNS record"
   type        = bool
-  default     = false
+  default     = true
 }
-
-variable "route53_zone_id" {
-  description = "Route53 Hosted Zone ID"
+# Cloudflare DNS Record Variables
+variable "cf_dns_record_name" {
+  description = "Cloudflare DNS Record Name"
   type        = string
-  default     = null
 }
-
-variable "route53_record_name" {
-  description = "Route53 record name (relative to the hosted zone or FQDN)"
+variable "cf_dns_record_value" {
+  description = "Cloudflare DNS Record Value"
   type        = string
-  default     = null
 }
-
-variable "route53_record_type" {
-  description = "Route53 record type (A, AAAA, CNAME, TXT, etc.)"
+variable "cf_dns_record_type" {
+  description = "Cloudflare DNS Record Type"
   type        = string
-  default     = "A"
+  default     = "CNAME" # Samples: A, AAAA, CNAME, TXT, MX, etc.
 }
-
-variable "route53_record_ttl" {
-  description = "Route53 record TTL in seconds (used for non-alias records)"
-  type        = number
-  default     = 300
-}
-
-variable "route53_record_values" {
-  description = "Route53 record values for non-alias records"
-  type        = list(string)
-  default     = []
-}
-
-variable "route53_alias" {
-  description = "Optional Route53 alias target (e.g., ALB). If provided, an alias record is created. Example: { name = \"dualstack.my-alb.amazonaws.com\", zone_id = \"Z35SXDOTRQ7X7K\", evaluate_target_health = true }"
-  type = object({
-    name                   = string
-    zone_id                = string
-    evaluate_target_health = optional(bool)
-  })
-  default = null
-}
-
-############################## Cloudflare (optional) ##############################
-variable "enable_cloudflare" {
-  description = "If true, manage one or more Cloudflare DNS records"
-  type        = bool
-  default     = false
-}
-
-variable "cloudflare_zone_id" {
-  description = "Cloudflare Zone ID"
-  type        = string
-  default     = null
-}
-
-variable "cloudflare_record_name" {
-  description = "Cloudflare DNS record name (relative label or FQDN depending on zone)"
-  type        = string
-  default     = null
-}
-
-variable "cloudflare_record_type" {
-  description = "Cloudflare DNS record type (A, CNAME, NS, TXT, etc.)"
-  type        = string
-  default     = "CNAME"
-}
-
-variable "cloudflare_record_ttl" {
-  description = "Cloudflare TTL. Use 1 for 'Auto'"
-  type        = number
-  default     = 1
-}
-
-variable "cloudflare_record_proxied" {
-  description = "Whether Cloudflare should proxy the record"
-  type        = bool
-  default     = false
-}
-
-variable "cloudflare_record_comment" {
-  description = "Cloudflare record comment"
+variable "cf_dns_record_comment" {
+  description = "Cloudflare DNS Record Comment"
   type        = string
   default     = "Managed by Terraform"
 }
-
-variable "cloudflare_record_values" {
-  description = "Cloudflare record contents. If multiple values are provided (e.g., NS delegation), one record per value is created. For single-value records, provide a single item."
-  type        = list(string)
-  default     = []
+variable "cf_dns_record_ttl" {
+  description = "Cloudflare DNS Record TTL"
+  type        = number
+  default     = 1 # Auto
+}
+variable "cf_dns_record_proxied" {
+  description = "Cloudflare DNS Record Proxied"
+  type        = bool
+  default     = false
 }
 
-variable "cloudflare_record_value_map" {
-  description = "Optional map of Cloudflare record contents keyed by stable identifiers. Prefer this when values are only known after apply (e.g., Route53 name_servers) to keep for_each keys static."
-  type        = map(string)
-  default     = {}
+# NGINX Proxy Manager - Certificate Variables
+variable "nginx_proxy_manager_letsencrypt_email" {
+  description = "Email for Let's Encrypt certificate registration"
+  type        = string
+  default     = "gvinura@gmail.com"
+}
+output "letsecrypt_issued_certificate_id" {
+  value = var.enable_proxy ? nginxproxymanager_certificate_letsencrypt.proxy_certificate_template[0].id : null
 }
 
-############################## Outputs ##############################
-output "route53_fqdn" {
-  value = try(aws_route53_record.route53_alias[0].fqdn, aws_route53_record.route53_standard[0].fqdn, null)
+# NGINX Proxy Manager - Proxy Host Variables
+variable "nginx_proxy_manager_forward_protocol" {
+  description = "Protocol to forward requests (http or https)"
+  type        = string
+  default     = "http"
 }
-
-output "cloudflare_record_ids" {
-  value = try([for r in cloudflare_dns_record.cloudflare_record : r.id], [])
+variable "nginx_proxy_manager_forward_service" {
+  description = "Service name or IP address to forward requests to"
+  type        = string
+  default     = "localhost"
 }
-
-output "cloudflare_record_names" {
-  value = try([for r in cloudflare_dns_record.cloudflare_record : r.name], [])
+variable "nginx_proxy_manager_forward_port" {
+  description = "Port number to forward requests to"
+  type        = number
+  default     = 80
+}
+variable "nginx_proxy_manager_advanced_config" {
+  description = "Advanced configuration for the proxy host"
+  type        = string
+  default     = ""
+}
+variable "nginx_proxy_manager_caching_enabled" {
+  description = "Enable caching for the proxy host"
+  type        = bool
+  default     = false
+}
+variable "nginx_proxy_manager_allow_websocket_upgrade" {
+  description = "Allow WebSocket upgrades"
+  type        = bool
+  default     = false
+}
+variable "nginx_proxy_manager_block_exploits" {
+  description = "Enable exploit blocking"
+  type        = bool
+  default     = true
+}
+variable "nginx_proxy_manager_additional_locations" {
+  description = "Additional location blocks for the proxy host"
+  type = list(object({
+    path           = string
+    forward_scheme = string
+    forward_host   = string
+    forward_port   = number
+  }))
+  default = []
+}
+variable "nginx_proxy_manager_ssl_forced" {
+  description = "Force SSL for the proxy host"
+  type        = bool
+  default     = true
+}
+variable "nginx_proxy_manager_hsts_enabled" {
+  description = "Enable HSTS"
+  type        = bool
+  default     = false
+}
+variable "nginx_proxy_manager_hsts_subdomains" {
+  description = "Include subdomains in HSTS"
+  type        = bool
+  default     = false
+}
+variable "nginx_proxy_manager_http2_support" {
+  description = "Enable HTTP/2 support"
+  type        = bool
+  default     = true
+}
+variable "depends_on_resource" {
+  description = "Resource that this service depends on"
+  type        = any
+  default     = null
 }

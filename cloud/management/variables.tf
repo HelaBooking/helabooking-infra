@@ -4,106 +4,18 @@ variable "namespace" {
   type        = string
   default     = "management"
 }
-variable "aws_region" {
-  description = "AWS region for Route53 and other AWS resources"
-  type        = string
-  default     = "ap-southeast-1"
-}
 
-variable "aws_cluster_name" {
-  description = "Kubernetes cluster name (used by AWS Load Balancer Controller for tagging and discovery)"
-  type        = string
-  default     = "helabooking-cloud"
-}
-
-variable "aws_vpc_id" {
-  description = "AWS VPC ID where the cluster nodes run (required by AWS Load Balancer Controller in non-EKS clusters)"
-  type        = string
-  default     = "vpc-0da0248a3e879a08b" # helabooking-cloud-vpc
-}
-
-# DNS / Domain configurations
+# DNS Record configurations
 variable "cf_default_root_domain" {
-  description = "Root domain for the management services (used as Route53 hosted zone name)"
+  description = "Root domain for the management services"
   type        = string
-  default     = "hela.ezbooking.lk"
+  default     = "cloud.ezbooking.lk"
 }
-variable "cf_default_internal_domain" {
-  description = "Internal domain for the management services (used for internal DNS records)"
+variable "cf_default_record_value" {
+  description = "Default Cloudflare DNS record pointing value"
   type        = string
-  default     = "internal.hela.ezbooking.lk"
-}
-variable "create_route53_hosted_zone" {
-  description = "Whether to create a Route53 hosted zone for cf_default_root_domain"
-  type        = bool
-  default     = true
-}
+  default     = "strangersmp.ddns.net"
 
-variable "existing_route53_zone_id" {
-  description = "Existing Route53 hosted zone ID to use when create_route53_hosted_zone=false"
-  type        = string
-  default     = null
-
-  validation {
-    condition     = var.create_route53_hosted_zone || (var.existing_route53_zone_id != null && trimspace(var.existing_route53_zone_id) != "")
-    error_message = "When create_route53_hosted_zone is false, existing_route53_zone_id must be set."
-  }
-}
-
-variable "private_alb_dns_name" {
-  description = "DNS name of the private ALB created by AWS Load Balancer Controller (used for Route53 alias records)"
-  type        = string
-  default     = null
-}
-
-variable "private_alb_zone_id" {
-  description = "Hosted zone ID of the private ALB (used for Route53 alias records)"
-  type        = string
-  default     = null
-
-  validation {
-    condition = (
-      (var.private_alb_dns_name == null && var.private_alb_zone_id == null) ||
-      (var.private_alb_dns_name != null && trimspace(var.private_alb_dns_name) != "" && var.private_alb_zone_id != null && trimspace(var.private_alb_zone_id) != "")
-    )
-    error_message = "private_alb_dns_name and private_alb_zone_id must be set together (both null or both non-empty)."
-  }
-}
-
-variable "harbor_alb_dns_name" {
-  description = "DNS name of the Harbor ALB (if Harbor creates its own ALB ingress)"
-  type        = string
-  default     = null
-}
-
-variable "harbor_alb_zone_id" {
-  description = "Hosted zone ID of the Harbor ALB"
-  type        = string
-  default     = null
-
-  validation {
-    condition = (
-      (var.harbor_alb_dns_name == null && var.harbor_alb_zone_id == null) ||
-      (var.harbor_alb_dns_name != null && trimspace(var.harbor_alb_dns_name) != "" && var.harbor_alb_zone_id != null && trimspace(var.harbor_alb_zone_id) != "")
-    )
-    error_message = "harbor_alb_dns_name and harbor_alb_zone_id must be set together (both null or both non-empty)."
-  }
-}
-
-variable "private_ingress_class_name" {
-  description = "Kubernetes IngressClass name to use for the shared private ALB ingress"
-  type        = string
-  default     = "alb-private"
-}
-variable "enable_cloudflare_delegation" {
-  description = "If true, creates NS records in Cloudflare to delegate to the Route53 hosted zone"
-  type        = bool
-  default     = true
-}
-variable "cloudflare_delegation_record_name" {
-  description = "The NS record name in Cloudflare for delegation (typically the subdomain label, e.g., 'management')"
-  type        = string
-  default     = "hela"
 }
 variable "cluster_service_domain" {
   description = "Root domain for kubernetes cluster services"
@@ -114,37 +26,46 @@ variable "cluster_service_domain" {
 
 ############################## Cluster Management Variables ##############################
 # Image/Helm Chart versions
+variable "traefik_version" {
+  description = "Version of Traefik Helm chart"
+  type        = string
+  default     = "37.4.0"
+}
+variable "cert_manager_version" {
+  description = "Version of Cert-Manager Helm chart"
+  type        = string
+  default     = "1.18.2"
+}
+variable "rancher_version" {
+  description = "Version of Rancher Helm chart"
+  type        = string
+  default     = "2.12.1"
+}
+variable "longhorn_version" {
+  description = "Version of Longhorn Helm chart"
+  type        = string
+  default     = "1.9.1"
+}
+variable "nginx_proxy_manager_version" {
+  description = "Version of NGINX Proxy Manager Helm chart"
+  type        = string
+  default     = "2.12.6"
+
+}
 variable "aws_ebs_csi_driver_version" {
   description = "Version of the aws-ebs-csi-driver Helm chart"
   type        = string
   default     = "2.54.1"
 }
 
-variable "aws_load_balancer_controller_version" {
-  description = "Version of the aws-load-balancer-controller Helm chart"
+# Specific configurations
+variable "rancher_hostname" {
+  description = "Hostname for Rancher server"
   type        = string
-  default     = "1.16.0"
+  default     = "rancher.management.ezbooking.lk"
 }
 
-variable "enable_aws_load_balancer_controller" {
-  description = "Whether to install AWS Load Balancer Controller"
-  type        = bool
-  default     = true
 
-  validation {
-    condition = (
-      !var.enable_aws_load_balancer_controller ||
-      (var.aws_cluster_name != null && trimspace(var.aws_cluster_name) != "" && var.aws_vpc_id != null && trimspace(var.aws_vpc_id) != "")
-    )
-    error_message = "When enable_aws_load_balancer_controller is true, aws_cluster_name and aws_vpc_id must be set."
-  }
-}
-
-variable "cert_manager_version" {
-  description = "Version of Cert-Manager Helm chart"
-  type        = string
-  default     = "1.18.2"
-}
 
 ############################## Project Variables ##############################
 # Image/Helm Chart versions
@@ -176,6 +97,16 @@ variable "istio_base_helm_version" {
 
 # Specific configurations
 # Jenkins
+variable "jenkins_agent_node_selector_hostname" {
+  description = "Node selector hostname for Jenkins agents"
+  type        = string
+  default     = "galaxy-node"
+}
+variable "jenkins_controller_node_selector_hostname" {
+  description = "Node selector hostname for Jenkins controller"
+  type        = string
+  default     = "pico-node"
+}
 variable "jenkins_agent_config" {
   description = "YAML configuration for Jenkins BuildKit container"
   type        = string

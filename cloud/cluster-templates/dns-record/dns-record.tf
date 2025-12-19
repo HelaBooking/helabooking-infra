@@ -1,48 +1,49 @@
-# Templates to be used for DNS record management (Route53 and/or Cloudflare)
+# Templates to be used for NGINX Proxy Manager and Cloudflare DNS management
 
-locals {
-  cloudflare_record_content_map = length(var.cloudflare_record_value_map) > 0 ? var.cloudflare_record_value_map : { for idx, v in var.cloudflare_record_values : tostring(idx) => v }
+# Cloudflare DNS Record Management Module Template
+resource "cloudflare_dns_record" "cloudflare_dns_record_template" {
+  zone_id = var.cf_zone_id
+  name    = var.cf_dns_record_name  # required
+  content = var.cf_dns_record_value # required
+  type    = var.cf_dns_record_type
+  comment = var.cf_dns_record_comment
+  ttl     = var.cf_dns_record_ttl
+  proxied = var.cf_dns_record_proxied
 }
 
-############################## Route53 (optional) ##############################
-resource "aws_route53_record" "route53_standard" {
-  count = var.enable_route53 && var.route53_alias == null ? 1 : 0
+# NGINX Proxy Manager - Certificate Template (let's encrypt)
+resource "nginxproxymanager_certificate_letsencrypt" "proxy_certificate_template" {
+  count        = var.enable_proxy ? 1 : 0 # Making this resource conditional
+  domain_names = [var.cf_dns_record_name]
 
-  allow_overwrite = true
+  letsencrypt_email = var.nginx_proxy_manager_letsencrypt_email
+  letsencrypt_agree = true
+  # also depends on the objects passed from the parent module, when a module is initialized using this template
+  depends_on = [cloudflare_dns_record.cloudflare_dns_record_template, var.depends_on_resource]
 
-  zone_id = var.route53_zone_id
-  name    = var.route53_record_name
-  type    = var.route53_record_type
-  ttl     = var.route53_record_ttl
-  records = var.route53_record_values
 }
+# NGINX Proxy Manager - Proxy Host Template
+resource "nginxproxymanager_proxy_host" "proxy_host_template" {
+  count        = var.enable_proxy ? 1 : 0 # Making this resource conditional
+  domain_names = [var.cf_dns_record_name]
 
-resource "aws_route53_record" "route53_alias" {
-  count = var.enable_route53 && var.route53_alias != null ? 1 : 0
+  forward_scheme          = var.nginx_proxy_manager_forward_protocol # required
+  forward_host            = var.nginx_proxy_manager_forward_service  # required
+  forward_port            = var.nginx_proxy_manager_forward_port     # required
+  advanced_config         = <<EOF
+# Managed by Terraform
+${var.nginx_proxy_manager_advanced_config}
+EOF
+  caching_enabled         = var.nginx_proxy_manager_caching_enabled
+  allow_websocket_upgrade = var.nginx_proxy_manager_allow_websocket_upgrade # required
+  block_exploits          = var.nginx_proxy_manager_block_exploits
 
-  allow_overwrite = true
+  certificate_id = var.enable_proxy ? nginxproxymanager_certificate_letsencrypt.proxy_certificate_template[0].id : null # required
 
-  zone_id = var.route53_zone_id
-  name    = var.route53_record_name
-  type    = var.route53_record_type
+  ssl_forced      = var.nginx_proxy_manager_ssl_forced
+  hsts_enabled    = var.nginx_proxy_manager_hsts_enabled
+  hsts_subdomains = var.nginx_proxy_manager_hsts_subdomains
+  http2_support   = var.nginx_proxy_manager_http2_support
 
-  alias {
-    name                   = var.route53_alias.name
-    zone_id                = var.route53_alias.zone_id
-    evaluate_target_health = try(var.route53_alias.evaluate_target_health, true)
-  }
-}
-
-############################## Cloudflare (optional) ##############################
-
-resource "cloudflare_dns_record" "cloudflare_record" {
-  for_each = var.enable_cloudflare ? local.cloudflare_record_content_map : {}
-
-  zone_id = var.cloudflare_zone_id
-  name    = var.cloudflare_record_name
-  type    = var.cloudflare_record_type
-  content = each.value
-  ttl     = var.cloudflare_record_ttl
-  proxied = var.cloudflare_record_proxied
-  comment = var.cloudflare_record_comment
+  depends_on = [nginxproxymanager_certificate_letsencrypt.proxy_certificate_template, var.depends_on_resource]
 }

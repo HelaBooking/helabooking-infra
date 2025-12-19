@@ -1,8 +1,8 @@
 terraform {
   required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
+    nginxproxymanager = {
+      source  = "Sander0542/nginxproxymanager"
+      version = "~> 1.2.2"
     }
     cloudflare = {
       source  = "cloudflare/cloudflare"
@@ -11,3 +11,11 @@ terraform {
   }
 }
 
+provider "nginxproxymanager" {
+  url      = var.nginx_proxy_manager_url
+  username = var.nginx_proxy_manager_username
+  password = var.nginx_proxy_manager_password
+}
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
+}

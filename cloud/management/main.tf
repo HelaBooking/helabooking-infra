@@ -16,14 +16,6 @@ terraform {
       source  = "hashicorp/helm"
       version = "~> 2.0"
     }
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "~> 5.10.1"
-    }
   }
 }
 
@@ -35,10 +27,4 @@ provider "helm" {
   kubernetes {
     config_path = "../cluster-configs/kube-config.yaml"
   }
-}
-provider "aws" {
-  region = var.aws_region
-}
-provider "cloudflare" {
-  api_token = var.cloudflare_api_token
 }

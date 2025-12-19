@@ -1,7 +1,7 @@
 # Deploying following cluster resources:
 # + AWS EBS StorageClass (requires AWS EBS CSI driver installed in cluster)
-# + AWS ALB IngressClasses (requires AWS Load Balancer Controller installed in cluster)
 # + Cert-Manager
+# + NGINX Proxy Manager
 
 # Deploying Project Common Resources:
 # + Jenkins + Trivy (Vulnerability Scanning)
@@ -12,6 +12,30 @@
 
 
 ################################ Cluster Resources ################################
+
+# Deploying Traefik Ingress Controller (Internal only) using helm-chart template
+module "traefik_helm" {
+  source = "../cluster-templates/helm-chart"
+
+  chart_name       = "traefik"
+  chart_repository = "https://traefik.github.io/charts"
+  chart            = "traefik"
+  namespace        = kubernetes_namespace.management.metadata[0].name
+  chart_version    = var.traefik_version
+  set_values = [
+    { name = "dashboard.enabled", value = "true" },
+    { name = "ports.websecure.tls.enabled", value = "true" },
+    { name = "ports.websecure.port", value = "443" },
+    { name = "ports.web.port", value = "80" },
+    { name = "service.type", value = "ClusterIP" },
+    { name = "providers.kubernetesIngress.publishedService.enabled", value = "true" },
+    { name = "providers.kubernetesIngress.publishedService.pathOverride", value = "management/traefik" },
+    { name = "replicas", value = "1" },
+    { name = "resources.requests.cpu", value = "50m" },
+    { name = "resources.requests.memory", value = "50Mi" }
+  ]
+  depends_on_resource = kubernetes_namespace.management
+}
 
 # AWS EBS CSI Driver (required for dynamic provisioning via ebs.csi.aws.com)
 module "aws_ebs_csi_driver_helm" {
@@ -27,31 +51,6 @@ module "aws_ebs_csi_driver_helm" {
   set_values = [
     { name = "controller.serviceAccount.create", value = "true" },
     { name = "node.serviceAccount.create", value = "true" },
-  ]
-}
-
-# AWS Load Balancer Controller (required for ALB provisioning from Ingress)
-module "aws_load_balancer_controller_helm" {
-  source = "../cluster-templates/helm-chart"
-
-  count = var.enable_aws_load_balancer_controller ? 1 : 0
-
-  chart_name       = "aws-load-balancer-controller"
-  chart_repository = "https://aws.github.io/eks-charts"
-  chart            = "aws-load-balancer-controller"
-  namespace        = "kube-system"
-  chart_version    = var.aws_load_balancer_controller_version
-
-  # For self-managed clusters, controller can use node instance profile credentials.
-  set_values = [
-    { name = "clusterName", value = var.aws_cluster_name },
-    { name = "region", value = var.aws_region },
-    { name = "vpcId", value = var.aws_vpc_id },
-    { name = "serviceAccount.create", value = "true" },
-    { name = "serviceAccount.name", value = "aws-load-balancer-controller" },
-
-    # Reduce webhook/cert friction; chart manages its own webhook by default.
-    { name = "replicaCount", value = "1" }
   ]
 }
 
@@ -77,40 +76,6 @@ resource "kubernetes_storage_class" "ebs_gp3" {
   depends_on = [module.aws_ebs_csi_driver_helm]
 }
 
-# AWS ALB IngressClasses
-module "alb_ingress_class_public" {
-  source      = "../cluster-templates/manifest"
-  api_version = "networking.k8s.io/v1"
-  kind        = "IngressClass"
-  metadata = {
-    name = "alb-public"
-    annotations = {
-      "ingressclass.kubernetes.io/is-default-class" = "true"
-    }
-  }
-  manifest_body = <<EOT
-spec:
-  controller: ingress.k8s.aws/alb
-EOT
-
-  depends_on_resource = var.enable_aws_load_balancer_controller ? [module.aws_load_balancer_controller_helm[0]] : []
-}
-module "alb_ingress_class_private" {
-  source      = "../cluster-templates/manifest"
-  api_version = "networking.k8s.io/v1"
-  kind        = "IngressClass"
-  metadata = {
-    name = "alb-private"
-  }
-  manifest_body = <<EOT
-spec:
-  controller: ingress.k8s.aws/alb
-EOT
-
-  depends_on_resource = var.enable_aws_load_balancer_controller ? [module.aws_load_balancer_controller_helm[0]] : []
-}
-
-
 # Deploying Cert-Manager
 module "cert_manager_helm" {
   source = "../cluster-templates/helm-chart"
@@ -129,7 +94,46 @@ module "cert_manager_helm" {
     { name = "resources.requests.cpu", value = "100m" },
     { name = "resources.requests.memory", value = "100Mi" }
   ]
-  depends_on_resource = [kubernetes_namespace.cert_manager]
+  depends_on_resource = [kubernetes_namespace.cert_manager, module.traefik_helm]
+}
+# Deploying NGINX Proxy Manager
+module "nginx_proxy_deployment" {
+  source = "../cluster-templates/deployment"
+
+  app_name       = "nginx-proxy-manager"
+  namespace      = kubernetes_namespace.management.metadata[0].name
+  replicas       = 1
+  selector_label = "nginx-proxy-manager"
+  app_image      = "jc21/nginx-proxy-manager:${var.nginx_proxy_manager_version}"
+  container_ports = [
+    {
+      name  = "admin-ui"
+      value = 81
+    },
+    {
+      name  = "http"
+      value = 80
+    },
+    {
+      name  = "https"
+      value = 443
+    }
+  ]
+  cpu_request    = "100m"
+  memory_request = "128Mi"
+  volume_configs = [
+    {
+      name       = "data",
+      pvc_name   = "nginx-proxy-manager-data-pvc",
+      mount_path = "/data"
+    },
+    {
+      name       = "letsencrypt",
+      pvc_name   = "nginx-proxy-manager-letsecrypt-pvc",
+      mount_path = "/etc/letsencrypt"
+    }
+  ]
+  depends_on_resource = [kubernetes_namespace.management, module.nginx_proxy_manager_data_pvc, module.nginx_proxy_manager_letsecrypt_pvc, module.longhorn_helm]
 }
 
 
@@ -152,7 +156,7 @@ module "jenkins_helm" {
     { name = "controller.resources.limits.cpu", value = "1000m" },
     { name = "controller.resources.limits.memory", value = "2Gi" },
     { name = "persistence.existingClaim", value = "jenkins-pvc" },
-    { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_internal_domain}/" },
+    { name = "controller.jenkinsUrl", value = "https://jenkins.${var.cf_default_root_domain}/" },
     # Agent configs - Defined in the custom_values variable
     # Plugins
     {
@@ -169,7 +173,7 @@ module "jenkins_helm" {
     { name = "controller.JCasC.configScripts.aws-creds", value = var.jenkins_aws_credentials },
     { name = "controller.JCasC.configScripts.harbor-creds", value = var.harbor_credentials }
   ]
-  depends_on_resource = [kubernetes_namespace.management, module.jenkins_pvc]
+  depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.jenkins_pvc]
 }
 
 # Deploying Harbor
@@ -184,17 +188,6 @@ module "harbor_helm" {
   set_values = [
     { name = "imagePullPolicy", value = "Always" },
     { name = "externalURL", value = "https://harbor.${var.cf_default_root_domain}" },
-    # Use ALB for Harbor (public) and terminate TLS at the ALB with ACM
-    { name = "expose.type", value = "ingress" },
-    { name = "expose.tls.enabled", value = "false" },
-    { name = "expose.ingress.className", value = "alb-public" },
-    { name = "expose.ingress.annotations.kubernetes\\.io/ingress\\.class", value = "alb-public" },
-    { name = "expose.ingress.annotations.alb\\.ingress\\.kubernetes\\.io/scheme", value = "internet-facing" },
-    { name = "expose.ingress.annotations.alb\\.ingress\\.kubernetes\\.io/target-type", value = "ip" },
-    { name = "expose.ingress.annotations.alb\\.ingress\\.kubernetes\\.io/listen-ports", value = "[{\"HTTP\":80},{\"HTTPS\":443}]" },
-    { name = "expose.ingress.annotations.alb\\.ingress\\.kubernetes\\.io/certificate-arn", value = aws_acm_certificate_validation.wildcard.certificate_arn },
-    { name = "expose.ingress.annotations.alb\\.ingress\\.kubernetes\\.io/ssl-redirect", value = "443" },
-    { name = "expose.ingress.annotations.alb\\.ingress\\.kubernetes\\.io/backend-protocol", value = "HTTP" },
     { name = "expose.ingress.hosts.core", value = "harbor.${var.cf_default_root_domain}" },
     { name = "harborAdminPassword", value = var.harbor_admin_password },
     # PVCs used in harbor
@@ -207,7 +200,7 @@ module "harbor_helm" {
     { name = "resources.limits.cpu", value = "1000m" },
     { name = "resources.limits.memory", value = "2Gi" }
   ]
-  depends_on_resource = [kubernetes_namespace.management, module.cert_manager_helm, aws_acm_certificate_validation.wildcard, module.harbor_registry_pvc, module.harbor_database_pvc, module.harbor_jobservice_pvc, module.harbor_redis_pvc, module.harbor_trivy_pvc]
+  depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.cert_manager_helm, module.harbor_registry_pvc, module.harbor_database_pvc, module.harbor_jobservice_pvc, module.harbor_redis_pvc, module.harbor_trivy_pvc]
 }
 
 # Deploying ArgoCD
@@ -220,19 +213,18 @@ module "argocd_helm" {
   namespace        = kubernetes_namespace.management.metadata[0].name
   chart_version    = var.argocd_version
   set_values = [
-    { name = "global.domain", value = "argocd.${var.cf_default_internal_domain}" },
+    { name = "global.domain", value = "argocd.${var.cf_default_root_domain}" },
     { name = "server.ingress.enabled", value = "false" },
-    { name = "configs.params.server.insecure", value = "true" },
     { name = "configs.secret.argocdServerAdminPassword", value = var.argocd_admin_password_hash },
     { name = "server.resources.requests.cpu", value = "400m" },
     { name = "server.resources.requests.memory", value = "512Mi" },
     # Forces ArgoCD to mark Ingress as "Healthy" even without an IP address
-    # {
-    #   name  = "configs.cm.resource\\.customizations\\.health\\.networking\\.k8s\\.io_Ingress"
-    #   value = "hs = {}\nhs.status = \"Healthy\"\nhs.message = \"Ingress is Healthy (IP check bypassed for ClusterIP)\"\nreturn hs"
-    # }
+    {
+      name  = "configs.cm.resource\\.customizations\\.health\\.networking\\.k8s\\.io_Ingress"
+      value = "hs = {}\nhs.status = \"Healthy\"\nhs.message = \"Ingress is Healthy (IP check bypassed for ClusterIP)\"\nreturn hs"
+    }
   ]
-  depends_on_resource = [kubernetes_namespace.management, module.cert_manager_helm]
+  depends_on_resource = [kubernetes_namespace.management, module.traefik_helm, module.cert_manager_helm]
 }
 
 # Deploying Fluent Bit
@@ -255,7 +247,7 @@ module "fluentbit_helm" {
     { name = "config.filters", value = var.fluentbit_config_filters },
     { name = "config.outputs", value = var.fluentbit_config_outputs }
   ]
-  depends_on_resource = [kubernetes_namespace.management]
+  depends_on_resource = [kubernetes_namespace.management, module.traefik_helm]
 }
 
 # Deploying Istio Base Chart
