@@ -1,8 +1,14 @@
 # Templates to be used for DNS record management (Route53 and/or Cloudflare)
 
+locals {
+  cloudflare_record_content_map = length(var.cloudflare_record_value_map) > 0 ? var.cloudflare_record_value_map : { for idx, v in var.cloudflare_record_values : tostring(idx) => v }
+}
+
 ############################## Route53 (optional) ##############################
 resource "aws_route53_record" "route53_standard" {
   count = var.enable_route53 && var.route53_alias == null ? 1 : 0
+
+  allow_overwrite = true
 
   zone_id = var.route53_zone_id
   name    = var.route53_record_name
@@ -13,6 +19,8 @@ resource "aws_route53_record" "route53_standard" {
 
 resource "aws_route53_record" "route53_alias" {
   count = var.enable_route53 && var.route53_alias != null ? 1 : 0
+
+  allow_overwrite = true
 
   zone_id = var.route53_zone_id
   name    = var.route53_record_name
@@ -28,7 +36,7 @@ resource "aws_route53_record" "route53_alias" {
 ############################## Cloudflare (optional) ##############################
 
 resource "cloudflare_dns_record" "cloudflare_record" {
-  for_each = var.enable_cloudflare ? { for idx, v in var.cloudflare_record_values : tostring(idx) => v } : {}
+  for_each = var.enable_cloudflare ? local.cloudflare_record_content_map : {}
 
   zone_id = var.cloudflare_zone_id
   name    = var.cloudflare_record_name

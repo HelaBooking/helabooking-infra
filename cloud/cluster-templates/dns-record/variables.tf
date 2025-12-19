@@ -94,6 +94,12 @@ variable "cloudflare_record_values" {
   default     = []
 }
 
+variable "cloudflare_record_value_map" {
+  description = "Optional map of Cloudflare record contents keyed by stable identifiers. Prefer this when values are only known after apply (e.g., Route53 name_servers) to keep for_each keys static."
+  type        = map(string)
+  default     = {}
+}
+
 ############################## Outputs ##############################
 output "route53_fqdn" {
   value = try(aws_route53_record.route53_alias[0].fqdn, aws_route53_record.route53_standard[0].fqdn, null)

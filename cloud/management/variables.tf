@@ -31,6 +31,11 @@ variable "existing_route53_zone_id" {
   description = "Existing Route53 hosted zone ID to use when create_route53_hosted_zone=false"
   type        = string
   default     = null
+
+  validation {
+    condition     = var.create_route53_hosted_zone || (var.existing_route53_zone_id != null && trim(var.existing_route53_zone_id) != "")
+    error_message = "When create_route53_hosted_zone is false, existing_route53_zone_id must be set."
+  }
 }
 
 variable "private_alb_dns_name" {
@@ -43,6 +48,14 @@ variable "private_alb_zone_id" {
   description = "Hosted zone ID of the private ALB (used for Route53 alias records)"
   type        = string
   default     = null
+
+  validation {
+    condition = (
+      (var.private_alb_dns_name == null && var.private_alb_zone_id == null) ||
+      (var.private_alb_dns_name != null && trim(var.private_alb_dns_name) != "" && var.private_alb_zone_id != null && trim(var.private_alb_zone_id) != "")
+    )
+    error_message = "private_alb_dns_name and private_alb_zone_id must be set together (both null or both non-empty)."
+  }
 }
 
 variable "harbor_alb_dns_name" {
@@ -55,6 +68,14 @@ variable "harbor_alb_zone_id" {
   description = "Hosted zone ID of the Harbor ALB"
   type        = string
   default     = null
+
+  validation {
+    condition = (
+      (var.harbor_alb_dns_name == null && var.harbor_alb_zone_id == null) ||
+      (var.harbor_alb_dns_name != null && trim(var.harbor_alb_dns_name) != "" && var.harbor_alb_zone_id != null && trim(var.harbor_alb_zone_id) != "")
+    )
+    error_message = "harbor_alb_dns_name and harbor_alb_zone_id must be set together (both null or both non-empty)."
+  }
 }
 
 variable "private_ingress_class_name" {
@@ -81,6 +102,12 @@ variable "cluster_service_domain" {
 
 ############################## Cluster Management Variables ##############################
 # Image/Helm Chart versions
+variable "aws_ebs_csi_driver_version" {
+  description = "Version of the aws-ebs-csi-driver Helm chart"
+  type        = string
+  default     = "2.54.1"
+}
+
 variable "cert_manager_version" {
   description = "Version of Cert-Manager Helm chart"
   type        = string

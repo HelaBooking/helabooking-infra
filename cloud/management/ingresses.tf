@@ -25,7 +25,7 @@ module "management_private_ingress" {
         {
           path         = "/"
           path_type    = "Prefix"
-          service_name = "jenkins.${var.namespace}.${var.cluster_service_domain}"
+          service_name = "jenkins"
           service_port = 8080
         }
       ]
@@ -36,7 +36,7 @@ module "management_private_ingress" {
         {
           path         = "/"
           path_type    = "Prefix"
-          service_name = "argo-cd-argocd-server.${var.namespace}.${var.cluster_service_domain}"
+          service_name = "argo-cd-argocd-server"
           service_port = 80
         }
       ]

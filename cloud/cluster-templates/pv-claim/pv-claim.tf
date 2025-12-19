@@ -1,6 +1,8 @@
 # Templates to be used for PVC
 
 resource "kubernetes_persistent_volume_claim" "pvc_template" {
+  wait_until_bound = false
+
   metadata {
     name      = var.pvc_name
     namespace = var.namespace

@@ -13,6 +13,26 @@
 
 ################################ Cluster Resources ################################
 
+# AWS EBS CSI Driver (required for dynamic provisioning via ebs.csi.aws.com)
+module "aws_ebs_csi_driver_helm" {
+  source = "../cluster-templates/helm-chart"
+
+  chart_name       = "aws-ebs-csi-driver"
+  chart_repository = "https://kubernetes-sigs.github.io/aws-ebs-csi-driver"
+  chart            = "aws-ebs-csi-driver"
+  namespace        = "kube-system"
+  chart_version    = var.aws_ebs_csi_driver_version
+
+  # Keep chart minimal; relies on node IAM role/instance profile by default.
+  set_values = [
+    { name = "controller.serviceAccount.create", value = "true" },
+    { name = "node.serviceAccount.create", value = "true" },
+
+    # Avoid installing snapshot controller/CRDs implicitly.
+    { name = "snapshotController.enabled", value = "false" }
+  ]
+}
+
 # AWS EBS CSI StorageClass (gp3)
 resource "kubernetes_storage_class" "ebs_gp3" {
   metadata {
@@ -31,6 +51,8 @@ resource "kubernetes_storage_class" "ebs_gp3" {
     type   = "gp3"
     fsType = "ext4"
   }
+
+  depends_on = [module.aws_ebs_csi_driver_helm]
 }
 
 # AWS ALB IngressClasses

@@ -8,6 +8,11 @@ resource "aws_route53_zone" "management_zone" {
   name  = var.cf_default_root_domain
 }
 
+locals {
+  enable_private_alb_alias = var.private_alb_dns_name != null && var.private_alb_zone_id != null
+  enable_harbor_alb_alias  = var.harbor_alb_dns_name != null && var.harbor_alb_zone_id != null
+}
+
 module "route53_delegation_cloudflare" {
   source = "../cluster-templates/dns-record"
 
@@ -18,7 +23,12 @@ module "route53_delegation_cloudflare" {
   cloudflare_record_ttl     = 3600
   cloudflare_record_proxied = false
   cloudflare_record_comment = "Delegation to AWS Route53 (managed by Terraform)"
-  cloudflare_record_values  = var.create_route53_hosted_zone ? aws_route53_zone.management_zone[0].name_servers : []
+  cloudflare_record_value_map = var.create_route53_hosted_zone ? {
+    ns0 = aws_route53_zone.management_zone[0].name_servers[0]
+    ns1 = aws_route53_zone.management_zone[0].name_servers[1]
+    ns2 = aws_route53_zone.management_zone[0].name_servers[2]
+    ns3 = aws_route53_zone.management_zone[0].name_servers[3]
+  } : {}
 }
 
 output "route53_name_servers" {
@@ -36,42 +46,42 @@ output "route53_name_servers" {
 module "jenkins_route53" {
   source = "../cluster-templates/dns-record"
 
-  enable_route53      = true
+  enable_route53      = local.enable_private_alb_alias
   route53_zone_id     = local.route53_zone_id
   route53_record_name = "jenkins.internal"
   route53_record_type = "A"
-  route53_alias = {
+  route53_alias = local.enable_private_alb_alias ? {
     name                   = var.private_alb_dns_name
     zone_id                = var.private_alb_zone_id
     evaluate_target_health = true
-  }
+  } : null
 }
 
 module "argocd_route53" {
   source = "../cluster-templates/dns-record"
 
-  enable_route53      = true
+  enable_route53      = local.enable_private_alb_alias
   route53_zone_id     = local.route53_zone_id
   route53_record_name = "argocd.internal"
   route53_record_type = "A"
-  route53_alias = {
+  route53_alias = local.enable_private_alb_alias ? {
     name                   = var.private_alb_dns_name
     zone_id                = var.private_alb_zone_id
     evaluate_target_health = true
-  }
+  } : null
 }
 
 module "harbor_route53" {
   source = "../cluster-templates/dns-record"
 
-  enable_route53      = true
+  enable_route53      = local.enable_harbor_alb_alias
   route53_zone_id     = local.route53_zone_id
   route53_record_name = "harbor"
   route53_record_type = "A"
-  route53_alias = {
+  route53_alias = local.enable_harbor_alb_alias ? {
     name                   = var.harbor_alb_dns_name
     zone_id                = var.harbor_alb_zone_id
     evaluate_target_health = true
-  }
+  } : null
 }
 
