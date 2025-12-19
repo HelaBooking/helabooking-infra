@@ -41,12 +41,12 @@ variable "rabbitmq_helm_version" {
 variable "enable_opensearch" {
   description = "Enable OpenSearch Cluster"
   type        = bool
-  default     = true
+  default     = false
 }
 variable "enable_opensearch_dashboard" {
   description = "Enable OpenSearch Dashboard"
   type        = bool
-  default     = true
+  default     = false
 }
 variable "enable_prometheus" {
   description = "Enable Prometheus & Alertmanager"
@@ -56,7 +56,7 @@ variable "enable_prometheus" {
 variable "enable_grafana" {
   description = "Enable Grafana"
   type        = bool
-  default     = true
+  default     = false
 }
 variable "enable_pgadmin" {
   description = "Enable PGAdmin deployment"
@@ -66,7 +66,7 @@ variable "enable_pgadmin" {
 variable "enable_kiali_dashboard" {
   description = "Enable Kiali Dashboard deployment"
   type        = bool
-  default     = true
+  default     = false
 }
 
 

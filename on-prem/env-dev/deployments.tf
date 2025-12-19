@@ -29,7 +29,7 @@ module "rabbitmq_helm" {
     { name = "auth.username", value = var.rabbitmq_username },
     { name = "auth.password", value = var.rabbitmq_password },
     { name = "auth.erlangCookie", value = var.rabbitmq_erlang_cookie },
-    { name = "replicaCount", value = "1" },
+    { name = "replicaCount", value = "0" },
     { name = "persistence.existingClaim", value = "rabbitmq-data-pvc" },
     { name = "podLabels.app", value = "rabbitmq" },
     { name = "service.type", value = "ClusterIP" },
